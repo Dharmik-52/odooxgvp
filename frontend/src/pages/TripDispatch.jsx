@@ -1,7 +1,4 @@
-import { useState, useEffect } from 'react'
-import { getTrips, createTrip, updateTripStatus } from '../api/trips'
-import { getVehicles } from '../api/vehicles'
-import { getDrivers } from '../api/drivers'
+import { useState } from 'react'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
 import FormField from '../components/FormField'
@@ -9,12 +6,9 @@ import StatusPill from '../components/StatusPill'
 import toast from 'react-hot-toast'
 import { Plus, CheckCircle, XCircle } from 'lucide-react'
 import { tripSchema, validateForm } from '../utils/validation'
+import { useTrips, useVehicles, useDrivers, useCreateTrip, useUpdateTripStatus } from '../hooks/useQueries'
 
 export default function TripDispatch() {
-  const [trips, setTrips] = useState([])
-  const [vehicles, setVehicles] = useState([])
-  const [drivers, setDrivers] = useState([])
-  const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [filters, setFilters] = useState({ status: '' })
   const [formData, setFormData] = useState({
@@ -30,26 +24,11 @@ export default function TripDispatch() {
   const [formError, setFormError] = useState('')
   const [formErrors, setFormErrors] = useState({})
 
-  useEffect(() => {
-    loadData()
-  }, [filters])
-
-  const loadData = async () => {
-    try {
-      const [tripsData, vehiclesData, driversData] = await Promise.all([
-        getTrips(filters),
-        getVehicles({ status: 'Available' }),
-        getDrivers({ duty_status: 'On_Duty' }),
-      ])
-      setTrips(tripsData)
-      setVehicles(vehiclesData)
-      setDrivers(driversData)
-    } catch (error) {
-      toast.error('Failed to load data')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data: trips = [], isLoading } = useTrips(filters)
+  const { data: vehicles = [] } = useVehicles({ status: 'Available' })
+  const { data: drivers = [] } = useDrivers({ duty_status: 'On_Duty' })
+  const createMutation = useCreateTrip()
+  const statusMutation = useUpdateTripStatus()
 
   const selectedVehicle = vehicles.find(v => v.id === parseInt(formData.vehicle_id))
 
@@ -67,7 +46,7 @@ export default function TripDispatch() {
     }
 
     try {
-      await createTrip({
+      await createMutation.mutateAsync({
         ...formData,
         cargo_weight_kg: parseFloat(formData.cargo_weight_kg),
         estimated_distance_km: parseFloat(formData.estimated_distance_km) || 0,
@@ -77,7 +56,6 @@ export default function TripDispatch() {
       toast.success('Trip created')
       setIsModalOpen(false)
       resetForm()
-      loadData()
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to create trip')
     }
@@ -91,15 +69,14 @@ export default function TripDispatch() {
     if (finalOdometer === null) return
 
     try {
-      await updateTripStatus(
-        trip.id,
-        'Completed',
-        parseFloat(finalOdometer) || null,
-        parseFloat(actualDistance) || null,
-        parseFloat(actualFuelCost) || null
-      )
+      await statusMutation.mutateAsync({
+        id: trip.id,
+        status: 'Completed',
+        finalOdometer: parseFloat(finalOdometer) || null,
+        actualDistance: parseFloat(actualDistance) || null,
+        actualFuelCost: parseFloat(actualFuelCost) || null,
+      })
       toast.success('Trip completed')
-      loadData()
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to complete trip')
     }
@@ -108,9 +85,8 @@ export default function TripDispatch() {
   const handleCancel = async (trip) => {
     if (!confirm('Cancel this trip?')) return
     try {
-      await updateTripStatus(trip.id, 'Cancelled')
+      await statusMutation.mutateAsync({ id: trip.id, status: 'Cancelled' })
       toast.success('Trip cancelled')
-      loadData()
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to cancel trip')
     }
@@ -186,6 +162,7 @@ export default function TripDispatch() {
       <DataTable
         columns={columns}
         data={trips}
+        loading={isLoading}
         onAction={(trip) => trip.status === 'Dispatched' ? handleComplete(trip) : null}
         actionLabel="Complete"
       />

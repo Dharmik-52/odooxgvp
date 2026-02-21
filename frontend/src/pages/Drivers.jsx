@@ -146,6 +146,7 @@ export default function Drivers() {
       <DataTable
         columns={columns}
         data={drivers}
+        loading={isLoading}
         onEdit={handleEdit}
         onDelete={handleDelete}
       />

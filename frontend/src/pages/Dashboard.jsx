@@ -1,47 +1,28 @@
-import { useState, useEffect } from 'react'
-import { getDashboardStats } from '../api/analytics'
 import KPICard from '../components/KPICard'
 import DataTable from '../components/DataTable'
 import StatusPill from '../components/StatusPill'
 import { Truck, Wrench, Activity, Package } from 'lucide-react'
+import { useDashboardStats } from '../hooks/useQueries'
 
 export default function Dashboard() {
-  const [stats, setStats] = useState(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    loadStats()
-    const interval = setInterval(loadStats, 5000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const loadStats = async () => {
-    try {
-      const data = await getDashboardStats()
-      setStats(data)
-    } catch (error) {
-      console.error('Failed to load stats:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data: stats, isLoading: loading } = useDashboardStats()
 
   const columns = [
     { key: 'id', label: 'Trip ID' },
-    { 
-      key: 'vehicle', 
+    {
+      key: 'vehicle',
       label: 'Vehicle',
       render: (val) => val?.name || '-'
     },
-    { 
-      key: 'driver', 
+    {
+      key: 'driver',
       label: 'Driver',
       render: (val) => val?.name || '-'
     },
     { key: 'origin', label: 'Origin' },
     { key: 'destination', label: 'Destination' },
-    { 
-      key: 'status', 
+    {
+      key: 'status',
       label: 'Status',
       render: (val) => <StatusPill status={val} />
     },
@@ -95,6 +76,7 @@ export default function Dashboard() {
         <DataTable
           columns={columns}
           data={stats?.recent_trips || []}
+          loading={loading}
         />
       </div>
     </div>

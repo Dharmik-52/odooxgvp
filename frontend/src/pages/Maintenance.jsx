@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -7,12 +7,12 @@ import {
   AlertTriangle, ChevronLeft, ChevronRight,
   RefreshCw, Calendar
 } from "lucide-react";
-import {
-  getLogs, getStats, createLog,
-  updateLog, resolveLog, deleteLog
-} from "../api/maintenance.js";
-import { getVehicles } from "../api/vehicles.js";
 import { maintenanceSchema, validateForm as zodValidateForm } from '../utils/validation';
+import {
+  useMaintenance, useMaintenanceStats, useVehicles,
+  useCreateMaintenance, useUpdateMaintenance,
+  useResolveMaintenance, useDeleteMaintenance
+} from '../hooks/useQueries';
 
 const SERVICE_TYPES = [
   "Oil Change", "Tire Replacement", "Engine Repair",
@@ -144,13 +144,6 @@ const inputStyle = {
 };
 
 export default function Maintenance() {
-  const [logs, setLogs] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [vehicles, setVehicles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showView, setShowView] = useState(false);
@@ -170,37 +163,31 @@ export default function Maintenance() {
   const [page, setPage] = useState(1);
   const PER_PAGE = 10;
 
-  const fetchLogs = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = {
-        page, per_page: PER_PAGE,
-        ...(search && { search }),
-        ...(statusF && { status: statusF }),
-        ...(serviceTypeF && { service_type: serviceTypeF }),
-        ...(dateFrom && { date_from: dateFrom }),
-        ...(dateTo && { date_to: dateTo }),
-      };
-      const res = await getLogs(params);
-      setLogs(res.data.items || []);
-      setTotal(res.data.total || 0);
-      setTotalPages(res.data.total_pages || 1);
-    } catch { toast.error("Failed to load maintenance logs"); }
-    finally { setLoading(false); }
-  }, [page, search, statusF, serviceTypeF, dateFrom, dateTo]);
+  // React Query hooks
+  const queryParams = {
+    page, per_page: PER_PAGE,
+    ...(search && { search }),
+    ...(statusF && { status: statusF }),
+    ...(serviceTypeF && { service_type: serviceTypeF }),
+    ...(dateFrom && { date_from: dateFrom }),
+    ...(dateTo && { date_to: dateTo }),
+  };
+  const { data: logsRes, isLoading: loading } = useMaintenance(queryParams);
+  const logs = logsRes?.data?.items || [];
+  const total = logsRes?.data?.total || 0;
+  const totalPages = logsRes?.data?.total_pages || 1;
 
-  const fetchStats = useCallback(async () => {
-    try { const res = await getStats(); setStats(res.data); }
-    catch { console.error("Stats load failed"); }
-  }, []);
+  const { data: statsRes } = useMaintenanceStats();
+  const stats = statsRes?.data || null;
 
-  const fetchVehicles = useCallback(async () => {
-    try { const res = await getVehicles(); setVehicles(res.data.items || res.data || []); }
-    catch { console.error("Vehicles load failed"); }
-  }, []);
+  const { data: vehiclesRaw } = useVehicles();
+  const vehicles = Array.isArray(vehiclesRaw) ? vehiclesRaw : (vehiclesRaw?.items || []);
 
-  useEffect(() => { fetchLogs(); }, [fetchLogs]);
-  useEffect(() => { fetchStats(); fetchVehicles(); }, []);
+  const createMut = useCreateMaintenance();
+  const updateMut = useUpdateMaintenance();
+  const resolveMut = useResolveMaintenance();
+  const deleteMut = useDeleteMaintenance();
+
   useEffect(() => { setPage(1); }, [search, statusF, serviceTypeF, dateFrom, dateTo]);
 
   const setField = (key, val) => setForm(f => ({ ...f, [key]: val }));
@@ -231,15 +218,13 @@ export default function Maintenance() {
         service_date: form.service_date,
         notes: form.notes.trim() || null
       };
-      const res = await createLog(payload);
+      const res = await createMut.mutateAsync(payload);
       const vName = res.data.vehicle_name;
       toast.success(`🔧 ${vName} marked as In Shop`);
       if (res.data.cost > 0) toast.success(`₹${res.data.cost} repair expense logged`);
       setShowCreate(false);
       setForm(EMPTY_FORM);
       setFormErrors({});
-      await fetchLogs();
-      await fetchStats();
     } catch (err) { toast.error(err.response?.data?.detail || "Failed to create log"); }
     finally { setSubmitting(false); }
   };
@@ -256,13 +241,11 @@ export default function Maintenance() {
         status: form.status,
         notes: form.notes?.trim() || null
       };
-      const res = await updateLog(selected.id, payload);
+      const res = await updateMut.mutateAsync({ id: selected.id, data: payload });
       toast.success("Service log updated");
       if (res.data.new_vehicle_status) toast.success(`${res.data.vehicle_name} is now ${res.data.new_vehicle_status.replace("_", " ")}`);
       setShowEdit(false);
       setSelected(null);
-      await fetchLogs();
-      await fetchStats();
     } catch (err) { toast.error(err.response?.data?.detail || "Failed to update log"); }
     finally { setSubmitting(false); }
   };
@@ -271,15 +254,13 @@ export default function Maintenance() {
     if (!selected) return;
     setSubmitting(true);
     try {
-      const res = await resolveLog(selected.id);
+      const res = await resolveMut.mutateAsync(selected.id);
       const msg = res.data.vehicle_available
         ? `✅ Resolved! ${res.data.vehicle_name} is now Available`
         : `✅ Resolved! ${res.data.vehicle_name} still In Shop (other active logs)`;
       toast.success(msg);
       setShowResolve(false);
       setSelected(null);
-      await fetchLogs();
-      await fetchStats();
     } catch (err) { toast.error(err.response?.data?.detail || "Failed to resolve log"); }
     finally { setSubmitting(false); }
   };
@@ -288,12 +269,10 @@ export default function Maintenance() {
     if (!selected) return;
     setSubmitting(true);
     try {
-      await deleteLog(selected.id);
+      await deleteMut.mutateAsync(selected.id);
       toast.success("Log deleted");
       setShowDelete(false);
       setSelected(null);
-      await fetchLogs();
-      await fetchStats();
     } catch (err) { toast.error(err.response?.data?.detail || "Failed to delete log"); }
     finally { setSubmitting(false); }
   };

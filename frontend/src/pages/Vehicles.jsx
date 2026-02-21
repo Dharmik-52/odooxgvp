@@ -165,6 +165,7 @@ export default function Vehicles() {
       <DataTable
         columns={columns}
         data={vehicles}
+        loading={isLoading}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onAction={handleRetire}
