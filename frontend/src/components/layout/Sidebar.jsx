@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import {
   LayoutDashboard, Truck, MapPin, Wrench,
   Receipt, Users, BarChart2, LogOut,
-  Shield, Menu, X
+  Shield, Menu, X, ChevronLeft, ChevronRight
 } from "lucide-react";
 
 const NAV = [
@@ -38,7 +38,7 @@ const NAV = [
   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isCollapsed, onToggleCollapse }) {
   const { role, user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -63,25 +63,38 @@ export default function Sidebar() {
     navigate("/login");
   };
 
+  const collapsed = !isMobile && isCollapsed;
+  const sidebarWidth = collapsed ? "68px" : "256px";
+
   const SidebarContent = () => (
     <aside style={{
-      width: "256px", height: "100%",
+      width: sidebarWidth, height: "100%",
       background: "#161B22",
       borderRight: "1px solid #30363D",
-      display: "flex", flexDirection: "column"
+      display: "flex", flexDirection: "column",
+      transition: "width 0.25s ease",
+      overflow: "hidden"
     }}>
+      {/* Header */}
       <div style={{
-        padding: "20px 24px",
+        padding: collapsed ? "20px 12px" : "20px 24px",
         borderBottom: "1px solid #30363D",
         display: "flex", alignItems: "center",
-        justifyContent: "space-between"
+        justifyContent: collapsed ? "center" : "space-between",
+        minHeight: "65px",
+        transition: "padding 0.25s ease"
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        {!collapsed && (
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Truck size={22} color="#4ade80" />
+            <span style={{ color: "white", fontWeight: 700, fontSize: "18px", whiteSpace: "nowrap" }}>
+              Fleet<span style={{ color: "#4ade80" }}>Flow</span>
+            </span>
+          </div>
+        )}
+        {collapsed && (
           <Truck size={22} color="#4ade80" />
-          <span style={{ color: "white", fontWeight: 700, fontSize: "18px" }}>
-            Fleet<span style={{ color: "#4ade80" }}>Flow</span>
-          </span>
-        </div>
+        )}
         {isMobile && (
           <button
             onClick={() => setIsOpen(false)}
@@ -95,45 +108,59 @@ export default function Sidebar() {
         )}
       </div>
 
-      <nav style={{ flex: 1, padding: "16px 12px", overflowY: "auto" }}>
+      {/* Navigation */}
+      <nav style={{ flex: 1, padding: collapsed ? "16px 8px" : "16px 12px", overflowY: "auto", transition: "padding 0.25s ease" }}>
         {visible.map(({ label, path, icon: Icon }) => (
           <NavLink
             key={path}
             to={path}
+            title={collapsed ? label : undefined}
             style={({ isActive }) => ({
-              display: "flex", alignItems: "center", gap: "12px",
-              padding: "10px 12px", borderRadius: "8px",
+              display: "flex", alignItems: "center",
+              gap: collapsed ? "0" : "12px",
+              justifyContent: collapsed ? "center" : "flex-start",
+              padding: collapsed ? "10px 0" : "10px 12px",
+              borderRadius: "8px",
               marginBottom: "4px", textDecoration: "none",
               fontSize: "14px", fontWeight: 500,
-              transition: "all 0.15s",
+              transition: "all 0.2s ease",
               color: isActive ? "#4ade80" : "#9ca3af",
               background: isActive ? "rgba(74,222,128,0.1)" : "transparent",
               borderLeft: isActive ? "2px solid #4ade80" : "2px solid transparent",
+              whiteSpace: "nowrap", overflow: "hidden",
             })}
           >
-            <Icon size={18} />
-            {label}
+            <Icon size={18} style={{ flexShrink: 0 }} />
+            {!collapsed && <span>{label}</span>}
           </NavLink>
         ))}
       </nav>
 
-      <div style={{ padding: "16px 12px", borderTop: "1px solid #30363D" }}>
-        <div style={{
-          display: "flex", alignItems: "center", gap: "6px",
-          padding: "0 12px", marginBottom: "10px"
-        }}>
-          <Shield size={13} color="#4ade80" />
-          <span style={{
-            color: "#4ade80", fontSize: "11px",
-            fontWeight: 600, textTransform: "uppercase"
+      {/* Footer */}
+      <div style={{ padding: collapsed ? "16px 8px" : "16px 12px", borderTop: "1px solid #30363D", transition: "padding 0.25s ease" }}>
+        {/* Role badge */}
+        {!collapsed && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: "6px",
+            padding: "0 12px", marginBottom: "10px"
           }}>
-            {role?.replace(/_/g, " ") || "User"}
-          </span>
-        </div>
+            <Shield size={13} color="#4ade80" />
+            <span style={{
+              color: "#4ade80", fontSize: "11px",
+              fontWeight: 600, textTransform: "uppercase"
+            }}>
+              {role?.replace(/_/g, " ") || "User"}
+            </span>
+          </div>
+        )}
 
+        {/* User info */}
         <div style={{
-          display: "flex", alignItems: "center", gap: "10px",
-          padding: "0 12px", marginBottom: "12px"
+          display: "flex", alignItems: "center",
+          gap: collapsed ? "0" : "10px",
+          justifyContent: collapsed ? "center" : "flex-start",
+          padding: collapsed ? "0" : "0 12px",
+          marginBottom: "12px"
         }}>
           <div style={{
             width: "32px", height: "32px", borderRadius: "50%",
@@ -146,25 +173,32 @@ export default function Sidebar() {
           }}>
             {user?.full_name?.charAt(0)?.toUpperCase() || "U"}
           </div>
-          <div style={{ overflow: "hidden" }}>
-            <p style={{
-              color: "white", fontSize: "13px", fontWeight: 500,
-              whiteSpace: "nowrap", overflow: "hidden",
-              textOverflow: "ellipsis", maxWidth: "160px"
-            }}>
-              {user?.full_name || "User"}
-            </p>
-          </div>
+          {!collapsed && (
+            <div style={{ overflow: "hidden" }}>
+              <p style={{
+                color: "white", fontSize: "13px", fontWeight: 500,
+                whiteSpace: "nowrap", overflow: "hidden",
+                textOverflow: "ellipsis", maxWidth: "160px"
+              }}>
+                {user?.full_name || "User"}
+              </p>
+            </div>
+          )}
         </div>
 
+        {/* Logout */}
         <button
           onClick={handleLogout}
+          title={collapsed ? "Sign Out" : undefined}
           style={{
-            display: "flex", alignItems: "center", gap: "10px",
+            display: "flex", alignItems: "center",
+            gap: collapsed ? "0" : "10px",
+            justifyContent: collapsed ? "center" : "flex-start",
             width: "100%", padding: "10px 12px",
             borderRadius: "8px", border: "none",
             background: "transparent", cursor: "pointer",
-            color: "#9ca3af", fontSize: "14px", fontWeight: 500
+            color: "#9ca3af", fontSize: "14px", fontWeight: 500,
+            transition: "all 0.15s"
           }}
           onMouseEnter={e => {
             e.currentTarget.style.background = "rgba(248,113,113,0.1)";
@@ -175,9 +209,39 @@ export default function Sidebar() {
             e.currentTarget.style.color = "#9ca3af";
           }}
         >
-          <LogOut size={18} />
-          Sign Out
+          <LogOut size={18} style={{ flexShrink: 0 }} />
+          {!collapsed && <span>Sign Out</span>}
         </button>
+
+        {/* Collapse toggle (desktop only) */}
+        {!isMobile && (
+          <button
+            onClick={onToggleCollapse}
+            style={{
+              display: "flex", alignItems: "center",
+              justifyContent: "center",
+              width: "100%", padding: "8px 12px",
+              marginTop: "8px",
+              borderRadius: "8px", border: "1px solid #30363D",
+              background: "transparent", cursor: "pointer",
+              color: "#9ca3af", fontSize: "12px", fontWeight: 500,
+              transition: "all 0.15s", gap: "6px"
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = "rgba(74,222,128,0.08)";
+              e.currentTarget.style.color = "#4ade80";
+              e.currentTarget.style.borderColor = "#4ade80";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = "#9ca3af";
+              e.currentTarget.style.borderColor = "#30363D";
+            }}
+          >
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            {!collapsed && <span>Collapse</span>}
+          </button>
+        )}
       </div>
     </aside>
   );

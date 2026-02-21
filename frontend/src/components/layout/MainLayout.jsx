@@ -5,6 +5,7 @@ import Topbar from "./Topbar.jsx";
 
 export default function MainLayout() {
   const [isMobile, setIsMobile] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     const handle = () => setIsMobile(window.innerWidth < 1024);
@@ -13,13 +14,19 @@ export default function MainLayout() {
     return () => window.removeEventListener("resize", handle);
   }, []);
 
+  const sidebarWidth = isMobile ? "0" : (isCollapsed ? "68px" : "256px");
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#0D1117" }}>
-      <Sidebar />
+      <Sidebar
+        isCollapsed={isCollapsed}
+        onToggleCollapse={() => setIsCollapsed(prev => !prev)}
+      />
       <div style={{
         display: "flex", flexDirection: "column", flex: 1,
-        marginLeft: isMobile ? "0" : "256px",
-        minHeight: "100vh"
+        marginLeft: sidebarWidth,
+        minHeight: "100vh",
+        transition: "margin-left 0.25s ease"
       }}>
         <Topbar isMobile={isMobile} />
         <main style={{

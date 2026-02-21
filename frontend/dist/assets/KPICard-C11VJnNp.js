@@ -1,0 +1,6 @@
+import{c as d}from"./createLucideIcon-DQPDRbx6.js";import{a}from"./axios-BxwilOnN.js";import{j as e}from"./index-D7i4SO6s.js";/**
+ * @license lucide-react v0.303.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const m=d("Activity",[["path",{d:"M22 12h-4l-3 9L9 3l-3 9H2",key:"d5dnw9"}]]),x=async()=>(await a.get("/analytics/dashboard")).data,p=async()=>(await a.get("/analytics/reports")).data,l={green:"border-l-ff-green",red:"border-l-ff-red",yellow:"border-l-ff-yellow",blue:"border-l-ff-blue"};function b({title:r,value:o,subtitle:s,color:n="green",icon:t}){return e.jsx("div",{className:`bg-ff-card border border-ff-border rounded-lg p-6 border-l-4 ${l[n]}`,children:e.jsxs("div",{className:"flex items-start justify-between",children:[e.jsxs("div",{children:[e.jsx("p",{className:"text-gray-400 text-sm font-medium mb-1",children:r}),e.jsx("p",{className:"text-3xl font-bold text-white font-mono",children:o}),s&&e.jsx("p",{className:"text-gray-500 text-xs mt-2",children:s})]}),t&&e.jsx("div",{className:"p-3 bg-ff-bg rounded-lg",children:e.jsx(t,{className:"w-6 h-6 text-gray-400"})})]})})}export{m as A,b as K,p as a,x as g};
