@@ -1,21 +1,22 @@
-import api from './axios'
+import { axiosInstance as api } from "./axios.js";
 
-export const getMaintenanceLogs = async () => {
-  const response = await api.get('/maintenance/')
-  return response.data
-}
+export const getLogs = (params) =>
+    api.get("/maintenance/", { params });
 
-export const createMaintenanceLog = async (data) => {
-  const response = await api.post('/maintenance/', data)
-  return response.data
-}
+export const getLog = (id) =>
+    api.get(`/maintenance/${id}`);
 
-export const resolveMaintenanceLog = async (id) => {
-  const response = await api.patch(`/maintenance/${id}/resolve`)
-  return response.data
-}
+export const getStats = () =>
+    api.get("/maintenance/stats");
 
-export const updateMaintenanceLog = async (id, data) => {
-  const response = await api.put(`/maintenance/${id}`, data)
-  return response.data
-}
+export const createLog = (data) =>
+    api.post("/maintenance/", data);
+
+export const updateLog = (id, data) =>
+    api.put(`/maintenance/${id}`, data);
+
+export const resolveLog = (id) =>
+    api.patch(`/maintenance/${id}/resolve`);
+
+export const deleteLog = (id) =>
+    api.delete(`/maintenance/${id}`);
