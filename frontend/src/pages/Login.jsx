@@ -1,12 +1,25 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { login, forgotPassword } from '../api/auth'
+import { login as apiLogin, forgotPassword } from '../api/auth'
+import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff, Loader2, Check, Truck } from 'lucide-react'
 import AuthInput from '../components/auth/AuthInput'
 import AuthCard from '../components/auth/AuthCard'
 
+function useScreenSize() {
+  const [size, setSize] = useState({ width: 1200, isMobile: false })
+  useEffect(() => {
+    const handle = () => setSize({ width: window.innerWidth, isMobile: window.innerWidth < 768 })
+    handle()
+    window.addEventListener('resize', handle)
+    return () => window.removeEventListener('resize', handle)
+  }, [])
+  return size
+}
+
 export default function Login() {
+  const { isMobile } = useScreenSize()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [emailError, setEmailError] = useState('')
@@ -20,6 +33,7 @@ export default function Login() {
   const [forgotSuccess, setForgotSuccess] = useState(false)
   const [forgotLoading, setForgotLoading] = useState(false)
 
+  const { login: authLogin } = useAuth()
   const navigate = useNavigate()
 
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -48,22 +62,11 @@ export default function Login() {
     setApiError('')
 
     try {
-      const res = await login(email, password)
+      const res = await apiLogin(email, password)
       const { access_token, role, full_name } = res
       
-      localStorage.setItem('fleetflow_token', access_token)
-      localStorage.setItem('fleetflow_role', role)
-      localStorage.setItem('fleetflow_user', full_name)
-      
+      authLogin(access_token, { role, full_name })
       toast.success(`Welcome back, ${full_name}!`)
-      
-      const roleRoutes = {
-        manager: '/dashboard',
-        dispatcher: '/trips',
-        safety_officer: '/drivers',
-        analyst: '/analytics'
-      }
-      navigate(roleRoutes[role] || '/dashboard')
       
     } catch (err) {
       if (err.response?.status === 401) {
@@ -110,8 +113,19 @@ export default function Login() {
     }
   }
 
+  const pageStyle = {
+    minHeight: "100vh",
+    background: "#0D1117",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: isMobile ? "16px" : "24px",
+    position: "relative",
+    overflow: "hidden"
+  }
+
   return (
-    <div className="min-h-screen bg-[#0D1117] flex items-center justify-center p-4 relative overflow-hidden">
+    <div style={pageStyle} className="min-h-screen">
       <div 
         className="absolute inset-0" 
         style={{
@@ -120,7 +134,7 @@ export default function Login() {
         }}
       />
       
-      <div className="relative w-full max-w-[440px] animate-card-enter">
+      <div className={`relative w-full max-w-[440px] animate-card-enter ${isMobile ? 'p-5' : ''}`} style={isMobile ? { width: '100%', maxWidth: '100%', margin: 0, borderRadius: 0 } : {}}>
         <AuthCard title="Sign in" subtitle="Sign in to your account">
           <form onSubmit={handleLogin} className="space-y-5">
             <AuthInput

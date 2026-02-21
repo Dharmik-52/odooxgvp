@@ -8,10 +8,16 @@
   box-sizing: border-box;
 }
 
+html, body, #root {
+  height: 100%;
+  width: 100%;
+}
+
 body {
   background-color: #0D1117;
   color: #ffffff;
   font-family: 'Outfit', sans-serif;
+  overflow-x: hidden;
 }
 
 .font-mono {
@@ -34,4 +40,38 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #484F58;
+}
+
+/* Responsive table scrolling */
+.table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile touch improvements */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Input zoom prevention on iOS */
+input, select, textarea {
+  font-size: 16px !important;
+}
+
+@media (min-width: 768px) {
+  input, select, textarea {
+    font-size: 14px !important;
+  }
+}
+
+/* Responsive text sizing */
+@media (max-width: 768px) {
+  h1 { font-size: 20px !important; }
+  h2 { font-size: 17px !important; }
+  .hide-mobile { display: none !important; }
+}
+
+@media (min-width: 769px) {
+  .hide-desktop { display: none !important; }
 }

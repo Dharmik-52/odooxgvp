@@ -15,7 +15,7 @@ export const forgotPassword = async (email) => {
   return response.data
 }
 
-export const getMe = async () => {
-  const response = await axiosInstance.get('/auth/me')
-  return response.data
-}
+export const getMe = (token) =>
+  axiosInstance.get("/auth/me", {
+    headers: { Authorization: `Bearer ${token}` }
+  });

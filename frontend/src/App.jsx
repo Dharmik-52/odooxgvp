@@ -1,154 +1,108 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider, useAuth } from './context/AuthContext'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import Unauthorized from './pages/Unauthorized'
-import Dashboard from './pages/Dashboard'
-import Vehicles from './pages/Vehicles'
-import TripDispatch from './pages/TripDispatch'
-import Maintenance from './pages/Maintenance'
-import Expenses from './pages/Expenses'
-import Drivers from './pages/Drivers'
-import Analytics from './pages/Analytics'
-import Sidebar from './components/Sidebar'
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Suspense, lazy } from "react";
+import { useAuth } from "./context/AuthContext.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
-function ProtectedRoute({ children, allowedRoles }) {
-  const { user, isAuthenticated } = useAuth()
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
-  }
-  
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/unauthorized" replace />
-  }
-  
-  return children
-}
+const Login        = lazy(() => import("./pages/Login.jsx"));
+const Register     = lazy(() => import("./pages/Register.jsx"));
+const Dashboard    = lazy(() => import("./pages/Dashboard.jsx"));
+const Vehicles     = lazy(() => import("./pages/Vehicles.jsx"));
+const TripDispatch = lazy(() => import("./pages/TripDispatch.jsx"));
+const Maintenance  = lazy(() => import("./pages/Maintenance.jsx"));
+const Expenses     = lazy(() => import("./pages/Expenses.jsx"));
+const Drivers      = lazy(() => import("./pages/Drivers.jsx"));
+const Analytics    = lazy(() => import("./pages/Analytics.jsx"));
+const Unauthorized = lazy(() => import("./pages/Unauthorized.jsx"));
+const MainLayout   = lazy(() => import("./components/layout/MainLayout.jsx"));
 
-function AppLayout({ children }) {
-  return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <main className="flex-1 ml-64 p-8 bg-ff-bg min-h-screen">
-        {children}
-      </main>
-    </div>
-  )
-}
+const Spinner = () => (
+  <div style={{
+    minHeight: "100vh", background: "#0D1117",
+    display: "flex", alignItems: "center", justifyContent: "center"
+  }}>
+    <div style={{
+      width: "36px", height: "36px",
+      border: "3px solid #4ade80",
+      borderTopColor: "transparent",
+      borderRadius: "50%",
+      animation: "spin 0.8s linear infinite"
+    }} />
+    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+  </div>
+);
 
 function AppRoutes() {
-  const { isAuthenticated, role } = useAuth()
-  
-  const getDefaultRoute = () => {
-    const rolePaths = {
-      manager: '/dashboard',
-      dispatcher: '/trips',
-      safety_officer: '/drivers',
-      analyst: '/analytics'
-    }
-    return rolePaths[role] || '/dashboard'
-  }
-  
+  const { isAuthenticated, role } = useAuth();
+
+  const home = {
+    manager:        "/dashboard",
+    dispatcher:     "/trips",
+    safety_officer: "/drivers",
+    analyst:        "/analytics"
+  }[role] || "/dashboard";
+
   return (
     <Routes>
-      <Route 
-        path="/login" 
-        element={isAuthenticated ? <Navigate to={getDefaultRoute()} replace /> : <Login />} 
-      />
-      <Route 
-        path="/register" 
-        element={isAuthenticated ? <Navigate to={getDefaultRoute()} replace /> : <Register />} 
-      />
-      <Route 
-        path="/unauthorized" 
-        element={<Unauthorized />} 
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <Dashboard />
-            </AppLayout>
+      <Route path="/" element={
+        <Navigate to={isAuthenticated ? home : "/login"} replace />
+      } />
+
+      <Route path="/login" element={
+        isAuthenticated ? <Navigate to={home} replace /> : <Login />
+      } />
+      <Route path="/register" element={
+        isAuthenticated ? <Navigate to={home} replace /> : <Register />
+      } />
+      <Route path="/unauthorized" element={<Unauthorized />} />
+
+      <Route element={
+        <ProtectedRoute>
+          <MainLayout />
+        </ProtectedRoute>
+      }>
+        <Route path="/dashboard" element={<Dashboard />} />
+
+        <Route path="/vehicles" element={
+          <ProtectedRoute allowedRoles={["manager"]}>
+            <Vehicles />
           </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/vehicles"
-        element={
-          <ProtectedRoute allowedRoles={['manager']}>
-            <AppLayout>
-              <Vehicles />
-            </AppLayout>
+        } />
+
+        <Route path="/trips" element={
+          <ProtectedRoute allowedRoles={["manager", "dispatcher"]}>
+            <TripDispatch />
           </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/trips"
-        element={
-          <ProtectedRoute allowedRoles={['manager', 'dispatcher']}>
-            <AppLayout>
-              <TripDispatch />
-            </AppLayout>
+        } />
+
+        <Route path="/maintenance" element={<Maintenance />} />
+        <Route path="/expenses"    element={<Expenses />} />
+
+        <Route path="/drivers" element={
+          <ProtectedRoute allowedRoles={["manager", "safety_officer"]}>
+            <Drivers />
           </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/maintenance"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <Maintenance />
-            </AppLayout>
+        } />
+
+        <Route path="/analytics" element={
+          <ProtectedRoute allowedRoles={["manager", "analyst"]}>
+            <Analytics />
           </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/expenses"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <Expenses />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/drivers"
-        element={
-          <ProtectedRoute allowedRoles={['manager', 'safety_officer']}>
-            <AppLayout>
-              <Drivers />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/analytics"
-        element={
-          <ProtectedRoute allowedRoles={['manager', 'analyst']}>
-            <AppLayout>
-              <Analytics />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        } />
+      </Route>
+
+      <Route path="*" element={
+        <Navigate to={isAuthenticated ? home : "/login"} replace />
+      } />
     </Routes>
-  )
+  );
 }
 
-function App() {
+export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/*" element={<AppRoutes />} />
-        </Routes>
-      </AuthProvider>
+      <Suspense fallback={<Spinner />}>
+        <AppRoutes />
+      </Suspense>
     </BrowserRouter>
-  )
+  );
 }
-
-export default App
