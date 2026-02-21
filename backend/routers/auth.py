@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from database import get_db
 from models import User
@@ -15,6 +17,7 @@ from auth import (
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -45,7 +48,9 @@ def register(user_data: UserRegisterRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login")
+@limiter.limit("10/minute")
 def login(
+    request: Request,
     login_data: UserLoginRequest,
     db: Session = Depends(get_db)
 ):
