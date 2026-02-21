@@ -126,6 +126,9 @@ def update_trip_status(
             trip.final_odometer = status_data.final_odometer
             vehicle.odometer_km = status_data.final_odometer
 
+        if status_data.actual_distance_km:
+            trip.actual_distance_km = status_data.actual_distance_km
+
         if status_data.actual_fuel_cost:
             trip.actual_fuel_cost = status_data.actual_fuel_cost
 
@@ -144,6 +147,20 @@ def update_trip_status(
                 trip_id=trip.id
             )
             db.add(fuel_expense)
+
+        if trip.revenue > 0:
+            revenue_expense = UnifiedExpense(
+                category=ExpenseCategory.Trip_Operational,
+                source_module="Trips",
+                source_id=trip.id,
+                description=f"Trip revenue: {trip.origin} → {trip.destination}",
+                amount=-trip.revenue,
+                date=date.today(),
+                vehicle_id=trip.vehicle_id,
+                driver_id=trip.driver_id,
+                trip_id=trip.id
+            )
+            db.add(revenue_expense)
 
         vehicle.status = VehicleStatus.Available
         driver.duty_status = DutyStatus.On_Duty

@@ -5,7 +5,7 @@ from typing import List
 from datetime import datetime, timedelta
 
 from database import get_db
-from models import User, Vehicle, Trip, MaintenanceLog, Expense, TripStatus, VehicleStatus
+from models import User, Vehicle, Trip, MaintenanceLog, Expense, TripStatus, VehicleStatus, Driver, UnifiedExpense
 from schemas import DashboardStats, AnalyticsReports, MonthlySummary, VehicleCost
 from auth import get_current_user
 
@@ -51,7 +51,7 @@ def get_analytics_reports(
     fleet_roi = []
 
     for vehicle in vehicles:
-        revenue = db.query(func.coalesce(func.sum(Trip.actual_fuel_cost), 0)).filter(
+        revenue = db.query(func.coalesce(func.sum(Trip.revenue), 0)).filter(
             Trip.vehicle_id == vehicle.id,
             Trip.status == TripStatus.Completed
         ).scalar()
@@ -64,34 +64,43 @@ def get_analytics_reports(
             MaintenanceLog.vehicle_id == vehicle.id
         ).scalar()
 
+        total_distance = db.query(func.coalesce(func.sum(Trip.actual_distance_km), 0)).filter(
+            Trip.vehicle_id == vehicle.id,
+            Trip.status == TripStatus.Completed
+        ).scalar()
+
         total_cost = float(fuel_cost) + float(maintenance_cost)
         roi = ((float(revenue) - total_cost) / vehicle.acquisition_cost * 100) if vehicle.acquisition_cost > 0 else 0.0
+        cost_per_km = total_cost / float(total_distance) if total_distance > 0 else 0.0
 
         fleet_roi.append({
             "vehicle_id": vehicle.id,
             "vehicle_name": vehicle.name,
             "revenue": float(revenue),
             "total_cost": total_cost,
+            "total_distance": float(total_distance),
+            "cost_per_km": round(cost_per_km, 2),
             "roi": round(roi, 2)
         })
 
     fuel_efficiency = []
     for vehicle in vehicles:
-        total_distance = db.query(func.coalesce(func.sum(Expense.distance_km), 0)).filter(
+        total_distance = db.query(func.coalesce(func.sum(Trip.actual_distance_km), 0)).filter(
+            Trip.vehicle_id == vehicle.id,
+            Trip.status == TripStatus.Completed
+        ).scalar()
+
+        total_fuel_cost_veh = db.query(func.coalesce(func.sum(Expense.fuel_cost), 0)).filter(
             Expense.vehicle_id == vehicle.id
         ).scalar()
 
-        total_fuel = db.query(func.coalesce(func.sum(Expense.fuel_cost), 0)).filter(
-            Expense.vehicle_id == vehicle.id
-        ).scalar()
-
-        efficiency = float(total_distance) / float(total_fuel) if total_fuel > 0 else 0.0
+        efficiency = float(total_distance) / float(total_fuel_cost_veh) if total_fuel_cost_veh > 0 else 0.0
 
         fuel_efficiency.append({
             "vehicle_id": vehicle.id,
             "vehicle_name": vehicle.name,
             "total_distance": float(total_distance),
-            "total_fuel_cost": float(total_fuel),
+            "total_fuel_cost": float(total_fuel_cost_veh),
             "km_per_rupee": round(efficiency, 2)
         })
 
@@ -103,9 +112,13 @@ def get_analytics_reports(
             monthly_data[month_key] = {
                 "revenue": 0.0,
                 "fuel_cost": 0.0,
-                "maintenance_cost": 0.0
+                "maintenance_cost": 0.0,
+                "trips": 0,
+                "distance": 0.0
             }
-        monthly_data[month_key]["revenue"] += float(trip.actual_fuel_cost or 0)
+        monthly_data[month_key]["revenue"] += float(trip.revenue or 0)
+        monthly_data[month_key]["trips"] += 1
+        monthly_data[month_key]["distance"] += float(trip.actual_distance_km or 0)
 
     expenses = db.query(Expense).all()
     for expense in expenses:
@@ -114,7 +127,9 @@ def get_analytics_reports(
             monthly_data[month_key] = {
                 "revenue": 0.0,
                 "fuel_cost": 0.0,
-                "maintenance_cost": 0.0
+                "maintenance_cost": 0.0,
+                "trips": 0,
+                "distance": 0.0
             }
         monthly_data[month_key]["fuel_cost"] += float(expense.fuel_cost)
 
@@ -125,7 +140,9 @@ def get_analytics_reports(
             monthly_data[month_key] = {
                 "revenue": 0.0,
                 "fuel_cost": 0.0,
-                "maintenance_cost": 0.0
+                "maintenance_cost": 0.0,
+                "trips": 0,
+                "distance": 0.0
             }
         monthly_data[month_key]["maintenance_cost"] += float(log.cost)
 
@@ -183,3 +200,73 @@ def get_analytics_reports(
         costliest_vehicles=costliest_vehicles,
         dead_stock=dead_stock
     )
+
+
+@router.get("/export/fleet-roi/csv")
+def export_fleet_roi_csv(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    vehicles = db.query(Vehicle).filter(Vehicle.status != VehicleStatus.Retired).all()
+    
+    csv_lines = ["Vehicle ID,Vehicle Name,Revenue,Total Cost,Fuel Cost,Maintenance Cost,Distance (km),Cost per km,ROI (%)"]
+    
+    for vehicle in vehicles:
+        revenue = db.query(func.coalesce(func.sum(Trip.revenue), 0)).filter(
+            Trip.vehicle_id == vehicle.id,
+            Trip.status == TripStatus.Completed
+        ).scalar()
+        
+        fuel_cost = db.query(func.coalesce(func.sum(Expense.fuel_cost), 0)).filter(
+            Expense.vehicle_id == vehicle.id
+        ).scalar()
+        
+        maintenance_cost = db.query(func.coalesce(func.sum(MaintenanceLog.cost), 0)).filter(
+            MaintenanceLog.vehicle_id == vehicle.id
+        ).scalar()
+        
+        total_distance = db.query(func.coalesce(func.sum(Trip.actual_distance_km), 0)).filter(
+            Trip.vehicle_id == vehicle.id,
+            Trip.status == TripStatus.Completed
+        ).scalar()
+        
+        total_cost = float(fuel_cost) + float(maintenance_cost)
+        roi = ((float(revenue) - total_cost) / vehicle.acquisition_cost * 100) if vehicle.acquisition_cost > 0 else 0.0
+        cost_per_km = total_cost / float(total_distance) if total_distance > 0 else 0.0
+        
+        csv_lines.append(f"{vehicle.id},{vehicle.name},{revenue:.2f},{total_cost:.2f},{fuel_cost:.2f},{maintenance_cost:.2f},{total_distance:.2f},{cost_per_km:.2f},{roi:.2f}")
+    
+    return "\n".join(csv_lines)
+
+
+@router.get("/export/trips/csv")
+def export_trips_csv(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    trips = db.query(Trip).order_by(Trip.created_at.desc()).all()
+    
+    csv_lines = ["Trip ID,Vehicle,Driver,Origin,Destination,Cargo (kg),Distance (km),Revenue,Est. Fuel Cost,Act. Fuel Cost,Status,Created,Completed"]
+    
+    for trip in trips:
+        vehicle = db.query(Vehicle).filter(Vehicle.id == trip.vehicle_id).first()
+        driver = db.query(Driver).filter(Driver.id == trip.driver_id).first()
+        
+        csv_lines.append(f"{trip.id},{vehicle.name if vehicle else ''},{driver.name if driver else ''},{trip.origin},{trip.destination},{trip.cargo_weight_kg},{trip.actual_distance_km or trip.estimated_distance_km},{trip.revenue},{trip.estimated_fuel_cost},{trip.actual_fuel_cost or ''},{trip.status.value},{trip.created_at},{trip.completed_at or ''}")
+    
+    return "\n".join(csv_lines)
+
+
+@router.get("/export/expenses/csv")
+def export_expenses_csv(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    expenses = db.query(UnifiedExpense).order_by(UnifiedExpense.date.desc()).all()
+    
+    csv_lines = ["ID,Date,Category,Source Module,Description,Amount,Vehicle ID,Driver ID,Trip ID"]
+    
+    for exp in expenses:
+        csv_lines.append(f"{exp.id},{exp.date},{exp.category.value if exp.category else ''},{exp.source_module},{exp.description},{exp.amount},{exp.vehicle_id or ''},{exp.driver_id or ''},{exp.trip_id or ''}")
+    
+    return "\n".join(csv_lines)

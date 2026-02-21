@@ -20,9 +20,10 @@ export const createTrip = async (data) => {
   return response.data
 }
 
-export const updateTripStatus = async (id, status, finalOdometer = null, actualFuelCost = null) => {
+export const updateTripStatus = async (id, status, finalOdometer = null, actualDistance = null, actualFuelCost = null) => {
   const data = { status }
   if (finalOdometer) data.final_odometer = finalOdometer
+  if (actualDistance) data.actual_distance_km = actualDistance
   if (actualFuelCost) data.actual_fuel_cost = actualFuelCost
   
   const response = await api.patch(`/trips/${id}/status`, data)
