@@ -126,10 +126,13 @@ class MaintenanceLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=False)
     issue = Column(String, nullable=False)
+    service_type = Column(String, nullable=False)
+    cost = Column(Float, default=0.0)
     service_date = Column(Date, nullable=False)
-    cost = Column(Float, nullable=False)
-    status = Column(Enum(MaintenanceStatus), default=MaintenanceStatus.New)
+    status = Column(String, default="New")
+    notes = Column(String, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
+    resolved_at = Column(DateTime, nullable=True)
 
     vehicle = relationship("Vehicle", back_populates="maintenance_logs")
 

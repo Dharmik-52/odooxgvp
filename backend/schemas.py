@@ -174,33 +174,6 @@ class TripResponse(TripBase):
     driver: Optional[DriverNested] = None
 
 
-class MaintenanceLogBase(BaseModel):
-    vehicle_id: int
-    issue: str
-    service_date: date
-    cost: float
-
-
-class MaintenanceLogCreate(MaintenanceLogBase):
-    pass
-
-
-class MaintenanceLogUpdate(BaseModel):
-    issue: Optional[str] = None
-    service_date: Optional[date] = None
-    cost: Optional[float] = None
-    status: Optional[MaintenanceStatus] = None
-
-
-class MaintenanceLogResponse(MaintenanceLogBase):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    status: MaintenanceStatus
-    created_at: datetime
-    vehicle: Optional[VehicleNested] = None
-
-
 class ExpenseBase(BaseModel):
     trip_id: Optional[int] = None
     driver_id: int
@@ -315,3 +288,51 @@ class ExpenseSummary(BaseModel):
     by_category: List[ExpenseByCategory]
     by_vehicle: List[ExpenseByVehicle]
     by_month: List[ExpenseByMonth]
+
+
+# Maintenance Log Schemas
+class MaintenanceLogCreate(BaseModel):
+    vehicle_id: int
+    issue: str
+    service_type: str
+    cost: float = 0.0
+    service_date: date
+    notes: Optional[str] = None
+
+
+class MaintenanceLogUpdate(BaseModel):
+    issue: Optional[str] = None
+    service_type: Optional[str] = None
+    cost: Optional[float] = None
+    service_date: Optional[date] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class MaintenanceLogResponse(BaseModel):
+    id: int
+    vehicle_id: int
+    vehicle_name: str
+    license_plate: str
+    issue: str
+    service_type: str
+    cost: float
+    service_date: date
+    status: str
+    notes: Optional[str] = None
+    created_at: datetime
+    resolved_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MaintenanceStatsResponse(BaseModel):
+    total_logs: int
+    new_count: int
+    in_progress_count: int
+    resolved_count: int
+    total_cost: float
+    vehicles_in_shop: int
+    most_common_issue: Optional[str] = None
+    avg_resolution_days: Optional[float] = None
