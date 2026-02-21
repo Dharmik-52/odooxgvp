@@ -6,8 +6,12 @@ from slowapi.errors import RateLimitExceeded
 import uvicorn
 
 from database import engine, Base
-from routers import auth, vehicles, drivers, trips, maintenance, expenses, analytics
+from routers import auth, vehicles, drivers, trips, maintenance, expenses, analytics, notifications
 from seed import seed_database
+from sentry_setup import init_sentry
+
+# Initialize Sentry before app creation
+init_sentry()
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -35,6 +39,7 @@ app.include_router(trips.router, prefix="/api/v1")
 app.include_router(maintenance.router, prefix="/api/v1")
 app.include_router(expenses.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")
+app.include_router(notifications.router, prefix="/api/v1")
 
 
 @app.on_event("startup")

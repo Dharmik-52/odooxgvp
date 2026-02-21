@@ -1,15 +1,14 @@
-import { useState, useEffect } from 'react'
-import { getDrivers, createDriver, updateDriver, deleteDriver } from '../api/drivers'
+import { useState } from 'react'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
 import FormField from '../components/FormField'
 import StatusPill from '../components/StatusPill'
 import toast from 'react-hot-toast'
 import { Plus, Edit, Trash2 } from 'lucide-react'
+import { driverSchema, validateForm } from '../utils/validation'
+import { useDrivers, useCreateDriver, useUpdateDriver, useDeleteDriver } from '../hooks/useQueries'
 
 export default function Drivers() {
-  const [drivers, setDrivers] = useState([])
-  const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingDriver, setEditingDriver] = useState(null)
   const [filters, setFilters] = useState({ duty_status: '' })
@@ -18,35 +17,30 @@ export default function Drivers() {
     license_number: '',
     license_expiry: '',
   })
+  const [formErrors, setFormErrors] = useState({})
 
-  useEffect(() => {
-    loadDrivers()
-  }, [filters])
-
-  const loadDrivers = async () => {
-    try {
-      const data = await getDrivers(filters)
-      setDrivers(data)
-    } catch (error) {
-      toast.error('Failed to load drivers')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data: drivers = [], isLoading } = useDrivers(filters)
+  const createMutation = useCreateDriver()
+  const updateMutation = useUpdateDriver()
+  const deleteMutation = useDeleteDriver()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    const { success, errors } = validateForm(driverSchema, formData)
+    setFormErrors(errors || {})
+    if (!success) return
+
     try {
       if (editingDriver) {
-        await updateDriver(editingDriver.id, formData)
+        await updateMutation.mutateAsync({ id: editingDriver.id, data: formData })
         toast.success('Driver updated')
       } else {
-        await createDriver(formData)
+        await createMutation.mutateAsync(formData)
         toast.success('Driver created')
       }
       setIsModalOpen(false)
       resetForm()
-      loadDrivers()
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Operation failed')
     }
@@ -65,9 +59,8 @@ export default function Drivers() {
   const handleDelete = async (driver) => {
     if (!confirm(`Delete driver ${driver.name}?`)) return
     try {
-      await deleteDriver(driver.id)
+      await deleteMutation.mutateAsync(driver.id)
       toast.success('Driver deleted')
-      loadDrivers()
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Delete failed')
     }
@@ -75,6 +68,7 @@ export default function Drivers() {
 
   const resetForm = () => {
     setEditingDriver(null)
+    setFormErrors({})
     setFormData({
       name: '',
       license_number: '',
@@ -89,8 +83,8 @@ export default function Drivers() {
   const columns = [
     { key: 'name', label: 'Name' },
     { key: 'license_number', label: 'License #' },
-    { 
-      key: 'license_expiry', 
+    {
+      key: 'license_expiry',
       label: 'Expiry',
       render: (val) => {
         const expired = isLicenseExpired(val)
@@ -101,18 +95,18 @@ export default function Drivers() {
         )
       }
     },
-    { 
-      key: 'completion_rate', 
+    {
+      key: 'completion_rate',
       label: 'Completion %',
       render: (val) => `${val}%`
     },
-    { 
-      key: 'safety_score', 
+    {
+      key: 'safety_score',
       label: 'Safety Score',
       render: (val) => `${val}%`
     },
-    { 
-      key: 'duty_status', 
+    {
+      key: 'duty_status',
       label: 'Status',
       render: (val, row) => {
         const expired = isLicenseExpired(row.license_expiry)
@@ -168,6 +162,7 @@ export default function Drivers() {
             onChange={(v) => setFormData({ ...formData, name: v })}
             required
             placeholder="John Smith"
+            error={formErrors.name}
           />
           <FormField
             label="License Number"
@@ -175,6 +170,7 @@ export default function Drivers() {
             onChange={(v) => setFormData({ ...formData, license_number: v })}
             required
             placeholder="DL-123456"
+            error={formErrors.license_number}
           />
           <FormField
             label="License Expiry"
@@ -182,6 +178,7 @@ export default function Drivers() {
             value={formData.license_expiry}
             onChange={(v) => setFormData({ ...formData, license_expiry: v })}
             required
+            error={formErrors.license_expiry}
           />
           <div className="flex gap-3 mt-6">
             <button

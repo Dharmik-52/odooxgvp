@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, ConfigDict
 from datetime import date, datetime
 from typing import Optional, List
-from models import UserRole, VehicleType, VehicleStatus, DutyStatus, TripStatus, MaintenanceStatus, ExpenseCategory
+from models import UserRole, VehicleType, VehicleStatus, DutyStatus, TripStatus, MaintenanceStatus, ExpenseCategory, NotificationType
 
 
 class UserCreate(BaseModel):
@@ -344,3 +344,26 @@ class MaintenanceStatsResponse(BaseModel):
     vehicles_in_shop: int
     most_common_issue: Optional[str] = None
     avg_resolution_days: Optional[float] = None
+
+
+# Notification Schemas
+class NotificationCreate(BaseModel):
+    title: str
+    message: str
+    type: NotificationType = NotificationType.info
+
+
+class NotificationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int
+    title: str
+    message: str
+    type: NotificationType
+    is_read: bool
+    created_at: datetime
+
+
+class NotificationCountResponse(BaseModel):
+    unread_count: int

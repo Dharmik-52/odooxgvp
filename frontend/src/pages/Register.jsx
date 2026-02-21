@@ -9,6 +9,7 @@ import {
 import AuthCard from '../components/auth/AuthCard'
 import AuthInput from '../components/auth/AuthInput'
 import PasswordInput from '../components/auth/PasswordInput'
+import { registerSchema, validateForm } from '../utils/validation'
 
 const roles = [
   {
@@ -78,51 +79,24 @@ export default function Register() {
   const handleRegister = async (e) => {
     e.preventDefault()
 
-    let hasError = false
-
-    if (fullName.trim().length < 2) {
-      setNameError('Name must be at least 2 characters')
-      hasError = true
-    } else {
-      setNameError('')
+    const formPayload = {
+      full_name: fullName,
+      email,
+      password,
+      confirmPassword: confirmPassword,
+      role: selectedRole,
+      terms: termsAccepted,
     }
+    const { success, errors } = validateForm(registerSchema, formPayload)
 
-    if (!isValidEmail(email)) {
-      setEmailError('Please enter a valid email address')
-      hasError = true
-    } else {
-      setEmailError('')
-    }
+    setNameError(errors?.full_name || '')
+    setEmailError(errors?.email || '')
+    setRoleError(errors?.role || '')
+    setPasswordError(errors?.password || '')
+    setConfirmError(errors?.confirmPassword || '')
+    setTermsError(errors?.terms || '')
 
-    if (!selectedRole) {
-      setRoleError('Please select a role')
-      hasError = true
-    } else {
-      setRoleError('')
-    }
-
-    if (!isStrongPassword(password)) {
-      setPasswordError('Password must be at least 8 characters with a number and special character')
-      hasError = true
-    } else {
-      setPasswordError('')
-    }
-
-    if (confirmPassword && confirmPassword !== password) {
-      setConfirmError('Passwords do not match')
-      hasError = true
-    } else {
-      setConfirmError('')
-    }
-
-    if (!termsAccepted) {
-      setTermsError('You must accept the terms to continue')
-      hasError = true
-    } else {
-      setTermsError('')
-    }
-
-    if (hasError) return
+    if (!success) return
 
     setIsLoading(true)
 

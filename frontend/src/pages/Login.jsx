@@ -7,6 +7,7 @@ import { Eye, EyeOff, Loader2, Check, Truck } from 'lucide-react'
 import AuthInput from '../components/auth/AuthInput'
 import AuthCard from '../components/auth/AuthCard'
 import PasswordInput from '../components/auth/PasswordInput'
+import { loginSchema, validateForm } from '../utils/validation'
 
 function useScreenSize() {
   const [size, setSize] = useState({ width: 1200, isMobile: false })
@@ -37,27 +38,13 @@ export default function Login() {
   const { login: authLogin } = useAuth()
   const navigate = useNavigate()
   const { login } = useAuth()
-  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-
   const handleLogin = async (e) => {
     e.preventDefault()
 
-    let hasError = false
-    if (!isValidEmail(email)) {
-      setEmailError('Please enter a valid email address')
-      hasError = true
-    } else {
-      setEmailError('')
-    }
-
-    if (!password) {
-      setPasswordError('Password is required')
-      hasError = true
-    } else {
-      setPasswordError('')
-    }
-
-    if (hasError) return
+    const { success, errors } = validateForm(loginSchema, { email, password })
+    setEmailError(errors?.email || '')
+    setPasswordError(errors?.password || '')
+    if (!success) return
 
     setIsLoading(true)
     setApiError('')
@@ -98,19 +85,13 @@ export default function Login() {
   }
 
   const handleEmailBlur = () => {
-    if (email && !isValidEmail(email)) {
-      setEmailError('Please enter a valid email address')
-    } else {
-      setEmailError('')
-    }
+    const { errors } = validateForm(loginSchema, { email, password: password || 'x' })
+    setEmailError(errors?.email || '')
   }
 
   const handlePasswordBlur = () => {
-    if (!password) {
-      setPasswordError('Password is required')
-    } else {
-      setPasswordError('')
-    }
+    const { errors } = validateForm(loginSchema, { email: email || 'x@x.x', password })
+    setPasswordError(errors?.password || '')
   }
 
   const pageStyle = {

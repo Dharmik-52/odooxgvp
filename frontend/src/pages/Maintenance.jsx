@@ -12,6 +12,7 @@ import {
   updateLog, resolveLog, deleteLog
 } from "../api/maintenance.js";
 import { getVehicles } from "../api/vehicles.js";
+import { maintenanceSchema, validateForm as zodValidateForm } from '../utils/validation';
 
 const SERVICE_TYPES = [
   "Oil Change", "Tire Replacement", "Engine Repair",
@@ -205,13 +206,17 @@ export default function Maintenance() {
   const setField = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
   const validateForm = () => {
-    const e = {};
-    if (!form.vehicle_id) e.vehicle_id = "Please select a vehicle";
-    if (!form.service_type) e.service_type = "Please select a service type";
-    if (!form.issue?.trim()) e.issue = "Issue description is required";
-    if (!form.service_date) e.service_date = "Service date is required";
-    setFormErrors(e);
-    return Object.keys(e).length === 0;
+    const data = {
+      vehicle_id: String(form.vehicle_id),
+      service_type: form.service_type,
+      issue: form.issue || '',
+      cost: String(form.cost || ''),
+      service_date: form.service_date || '',
+      notes: form.notes || '',
+    };
+    const { success, errors } = zodValidateForm(maintenanceSchema, data);
+    setFormErrors(errors || {});
+    return success;
   };
 
   const handleCreate = async () => {

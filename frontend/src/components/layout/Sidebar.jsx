@@ -3,14 +3,18 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import {
   LayoutDashboard, Truck, MapPin, Wrench,
-  Receipt, Users, BarChart2, LogOut,
+  Receipt, Users, BarChart2, LogOut, Route,
   Shield, Menu, X, ChevronLeft, ChevronRight
 } from "lucide-react";
 
 const NAV = [
   {
     label: "Dashboard", path: "/dashboard", icon: LayoutDashboard,
-    roles: ["manager", "dispatcher"]
+    roles: ["manager"]
+  },
+  {
+    label: "My Dashboard", path: "/driver-dashboard", icon: LayoutDashboard,
+    roles: ["dispatcher"]
   },
   {
     label: "Vehicle Registry", path: "/vehicles", icon: Truck,
@@ -18,7 +22,11 @@ const NAV = [
   },
   {
     label: "Trip Dispatch", path: "/trips", icon: MapPin,
-    roles: ["manager", "dispatcher"]
+    roles: ["manager"]
+  },
+  {
+    label: "Active Trip", path: "/active-trip", icon: Route,
+    roles: ["dispatcher"]
   },
   {
     label: "Maintenance", path: "/maintenance", icon: Wrench,
@@ -27,6 +35,10 @@ const NAV = [
   {
     label: "Expenses", path: "/expenses", icon: Receipt,
     roles: ["manager"]
+  },
+  {
+    label: "Log Expense", path: "/driver-expenses", icon: Receipt,
+    roles: ["dispatcher"]
   },
   {
     label: "Drivers", path: "/drivers", icon: Users,

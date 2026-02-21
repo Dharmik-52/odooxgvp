@@ -87,6 +87,7 @@ class Driver(Base):
     __tablename__ = "drivers"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, unique=True)
     name = Column(String, nullable=False)
     license_number = Column(String, unique=True, nullable=False, index=True)
     license_expiry = Column(Date, nullable=False)
@@ -95,6 +96,7 @@ class Driver(Base):
     duty_status = Column(Enum(DutyStatus), default=DutyStatus.On_Duty)
     created_at = Column(DateTime, server_default=func.now())
 
+    user = relationship("User", backref="driver_profile")
     trips = relationship("Trip", back_populates="driver")
     expenses = relationship("Expense", back_populates="driver")
 
@@ -178,3 +180,24 @@ class UnifiedExpense(Base):
     driver = relationship("Driver")
     trip = relationship("Trip")
     maintenance = relationship("MaintenanceLog")
+
+
+class NotificationType(str, enum.Enum):
+    info = "info"
+    warning = "warning"
+    alert = "alert"
+    success = "success"
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String, nullable=False)
+    message = Column(String, nullable=False)
+    type = Column(Enum(NotificationType), default=NotificationType.info)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+    user = relationship("User", backref="notifications")

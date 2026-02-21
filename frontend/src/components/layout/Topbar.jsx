@@ -1,15 +1,15 @@
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { Bell } from "lucide-react";
+import NotificationPanel from "../NotificationPanel.jsx";
 
 const TITLES = {
-  "/dashboard":   "Command Center",
-  "/vehicles":    "Vehicle Registry",
-  "/trips":       "Trip Dispatch",
+  "/dashboard": "Command Center",
+  "/vehicles": "Vehicle Registry",
+  "/trips": "Trip Dispatch",
   "/maintenance": "Maintenance Logs",
-  "/expenses":    "Expenses & Fuel",
-  "/drivers":     "Driver Profiles",
-  "/analytics":   "Analytics & Reports",
+  "/expenses": "Expenses & Fuel",
+  "/drivers": "Driver Profiles",
+  "/analytics": "Analytics & Reports",
 };
 
 export default function Topbar({ isMobile }) {
@@ -35,17 +35,7 @@ export default function Topbar({ isMobile }) {
       </h1>
 
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        <button style={{
-          position: "relative", background: "none",
-          border: "none", cursor: "pointer", color: "#9ca3af"
-        }}>
-          <Bell size={18} />
-          <span style={{
-            position: "absolute", top: "-2px", right: "-2px",
-            width: "7px", height: "7px",
-            background: "#f87171", borderRadius: "50%"
-          }} />
-        </button>
+        <NotificationPanel />
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <div style={{

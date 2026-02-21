@@ -8,6 +8,7 @@ import FormField from '../components/FormField'
 import StatusPill from '../components/StatusPill'
 import toast from 'react-hot-toast'
 import { Plus, CheckCircle, XCircle } from 'lucide-react'
+import { tripSchema, validateForm } from '../utils/validation'
 
 export default function TripDispatch() {
   const [trips, setTrips] = useState([])
@@ -27,6 +28,7 @@ export default function TripDispatch() {
     estimated_fuel_cost: '',
   })
   const [formError, setFormError] = useState('')
+  const [formErrors, setFormErrors] = useState({})
 
   useEffect(() => {
     loadData()
@@ -55,6 +57,10 @@ export default function TripDispatch() {
     e.preventDefault()
     setFormError('')
 
+    const { success, errors } = validateForm(tripSchema, formData)
+    setFormErrors(errors || {})
+    if (!success) return
+
     if (selectedVehicle && parseFloat(formData.cargo_weight_kg) > selectedVehicle.max_capacity_kg) {
       setFormError(`Cargo exceeds vehicle capacity of ${selectedVehicle.max_capacity_kg}kg`)
       return
@@ -81,13 +87,13 @@ export default function TripDispatch() {
     const finalOdometer = prompt('Enter final odometer reading:', trip.vehicle?.odometer_km || '')
     const actualDistance = prompt('Enter actual distance (km):', trip.estimated_distance_km || '')
     const actualFuelCost = prompt('Enter actual fuel cost:', trip.estimated_fuel_cost || '')
-    
+
     if (finalOdometer === null) return
-    
+
     try {
       await updateTripStatus(
-        trip.id, 
-        'Completed', 
+        trip.id,
+        'Completed',
         parseFloat(finalOdometer) || null,
         parseFloat(actualDistance) || null,
         parseFloat(actualFuelCost) || null
@@ -122,29 +128,30 @@ export default function TripDispatch() {
       estimated_fuel_cost: '',
     })
     setFormError('')
+    setFormErrors({})
   }
 
   const columns = [
     { key: 'id', label: 'Trip ID' },
-    { 
-      key: 'vehicle', 
+    {
+      key: 'vehicle',
       label: 'Vehicle',
       render: (val) => val?.name || '-'
     },
-    { 
-      key: 'driver', 
+    {
+      key: 'driver',
       label: 'Driver',
       render: (val) => val?.name || '-'
     },
-    { 
-      key: 'cargo_weight_kg', 
+    {
+      key: 'cargo_weight_kg',
       label: 'Cargo (kg)',
       render: (val) => val?.toLocaleString()
     },
     { key: 'origin', label: 'Origin' },
     { key: 'destination', label: 'Destination' },
-    { 
-      key: 'status', 
+    {
+      key: 'status',
       label: 'Status',
       render: (val) => <StatusPill status={val} />
     },

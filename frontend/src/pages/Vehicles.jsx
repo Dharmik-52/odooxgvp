@@ -1,18 +1,18 @@
-import { useState, useEffect } from 'react'
-import { getVehicles, createVehicle, updateVehicle, deleteVehicle, retireVehicle } from '../api/vehicles'
+import { useState } from 'react'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
 import FormField from '../components/FormField'
 import StatusPill from '../components/StatusPill'
 import toast from 'react-hot-toast'
 import { Plus, Edit, Trash2, Archive } from 'lucide-react'
+import { vehicleSchema, validateForm } from '../utils/validation'
+import { useVehicles, useCreateVehicle, useUpdateVehicle, useDeleteVehicle, useRetireVehicle } from '../hooks/useQueries'
 
 export default function Vehicles() {
-  const [vehicles, setVehicles] = useState([])
-  const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState(null)
   const [filters, setFilters] = useState({ status: '', type: '' })
+  const [formErrors, setFormErrors] = useState({})
   const [formData, setFormData] = useState({
     name: '',
     license_plate: '',
@@ -23,41 +23,36 @@ export default function Vehicles() {
     model: '',
   })
 
-  useEffect(() => {
-    loadVehicles()
-  }, [filters])
-
-  const loadVehicles = async () => {
-    try {
-      const data = await getVehicles(filters)
-      setVehicles(data)
-    } catch (error) {
-      toast.error('Failed to load vehicles')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data: vehicles = [], isLoading } = useVehicles(filters)
+  const createMutation = useCreateVehicle()
+  const updateMutation = useUpdateVehicle()
+  const deleteMutation = useDeleteVehicle()
+  const retireMutation = useRetireVehicle()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    const { success, errors } = validateForm(vehicleSchema, formData)
+    setFormErrors(errors || {})
+    if (!success) return
+
     try {
       const payload = {
         ...formData,
         max_capacity_kg: parseFloat(formData.max_capacity_kg),
-        odometer_km: parseFloat(formData.odometer_km),
-        acquisition_cost: parseFloat(formData.acquisition_cost),
+        odometer_km: parseFloat(formData.odometer_km) || 0,
+        acquisition_cost: parseFloat(formData.acquisition_cost) || 0,
       }
 
       if (editingVehicle) {
-        await updateVehicle(editingVehicle.id, payload)
+        await updateMutation.mutateAsync({ id: editingVehicle.id, data: payload })
         toast.success('Vehicle updated')
       } else {
-        await createVehicle(payload)
+        await createMutation.mutateAsync(payload)
         toast.success('Vehicle created')
       }
       setIsModalOpen(false)
       resetForm()
-      loadVehicles()
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Operation failed')
     }
@@ -80,9 +75,8 @@ export default function Vehicles() {
   const handleDelete = async (vehicle) => {
     if (!confirm(`Delete vehicle ${vehicle.name}?`)) return
     try {
-      await deleteVehicle(vehicle.id)
+      await deleteMutation.mutateAsync(vehicle.id)
       toast.success('Vehicle deleted')
-      loadVehicles()
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Delete failed')
     }
@@ -90,9 +84,8 @@ export default function Vehicles() {
 
   const handleRetire = async (vehicle) => {
     try {
-      await retireVehicle(vehicle.id)
+      await retireMutation.mutateAsync(vehicle.id)
       toast.success('Vehicle retired')
-      loadVehicles()
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to retire')
     }
@@ -100,6 +93,7 @@ export default function Vehicles() {
 
   const resetForm = () => {
     setEditingVehicle(null)
+    setFormErrors({})
     setFormData({
       name: '',
       license_plate: '',
@@ -115,18 +109,18 @@ export default function Vehicles() {
     { key: 'name', label: 'Name' },
     { key: 'license_plate', label: 'License Plate' },
     { key: 'type', label: 'Type' },
-    { 
-      key: 'max_capacity_kg', 
+    {
+      key: 'max_capacity_kg',
       label: 'Capacity (kg)',
       render: (val) => val?.toLocaleString()
     },
-    { 
-      key: 'odometer_km', 
+    {
+      key: 'odometer_km',
       label: 'Odometer (km)',
       render: (val) => val?.toLocaleString()
     },
-    { 
-      key: 'status', 
+    {
+      key: 'status',
       label: 'Status',
       render: (val) => <StatusPill status={val} />
     },
@@ -189,6 +183,7 @@ export default function Vehicles() {
             onChange={(v) => setFormData({ ...formData, license_plate: v })}
             required
             placeholder="ABC-1234"
+            error={formErrors.license_plate}
           />
           <FormField
             label="Name"
@@ -196,6 +191,7 @@ export default function Vehicles() {
             onChange={(v) => setFormData({ ...formData, name: v })}
             required
             placeholder="Ford Transit"
+            error={formErrors.name}
           />
           <FormField
             label="Type"
