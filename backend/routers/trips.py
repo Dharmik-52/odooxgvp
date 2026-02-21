@@ -4,7 +4,7 @@ from typing import Optional, List
 from datetime import date, datetime
 
 from database import get_db
-from models import User, Vehicle, Driver, Trip, VehicleStatus, DutyStatus, TripStatus
+from models import User, Vehicle, Driver, Trip, VehicleStatus, DutyStatus, TripStatus, UnifiedExpense, ExpenseCategory
 from schemas import TripCreate, TripUpdate, TripResponse, TripStatusUpdate
 from auth import get_current_user
 
@@ -128,6 +128,22 @@ def update_trip_status(
 
         if status_data.actual_fuel_cost:
             trip.actual_fuel_cost = status_data.actual_fuel_cost
+
+        fuel_cost = trip.actual_fuel_cost or trip.estimated_fuel_cost or 0
+        
+        if fuel_cost > 0:
+            fuel_expense = UnifiedExpense(
+                category=ExpenseCategory.Trip_Fuel,
+                source_module="Trips",
+                source_id=trip.id,
+                description=f"Fuel cost for Trip #{trip.id}: {trip.origin} → {trip.destination}",
+                amount=fuel_cost,
+                date=date.today(),
+                vehicle_id=trip.vehicle_id,
+                driver_id=trip.driver_id,
+                trip_id=trip.id
+            )
+            db.add(fuel_expense)
 
         vehicle.status = VehicleStatus.Available
         driver.duty_status = DutyStatus.On_Duty

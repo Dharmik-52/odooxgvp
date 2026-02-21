@@ -45,6 +45,15 @@ class MaintenanceStatus(str, enum.Enum):
     Resolved = "Resolved"
 
 
+class ExpenseCategory(str, enum.Enum):
+    Vehicle_Acquisition = "Vehicle_Acquisition"
+    Trip_Fuel = "Trip_Fuel"
+    Trip_Operational = "Trip_Operational"
+    Maintenance_Repair = "Maintenance_Repair"
+    Driver_Compliance = "Driver_Compliance"
+    Miscellaneous = "Miscellaneous"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -140,3 +149,26 @@ class Expense(Base):
     trip = relationship("Trip", back_populates="expenses")
     driver = relationship("Driver", back_populates="expenses")
     vehicle = relationship("Vehicle", back_populates="expenses")
+
+
+class UnifiedExpense(Base):
+    __tablename__ = "unified_expenses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    category = Column(Enum(ExpenseCategory), nullable=False)
+    source_module = Column(String, nullable=False)
+    source_id = Column(Integer, nullable=True)
+    description = Column(String, nullable=False)
+    amount = Column(Float, nullable=False)
+    date = Column(Date, nullable=False)
+    vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=True)
+    driver_id = Column(Integer, ForeignKey("drivers.id"), nullable=True)
+    trip_id = Column(Integer, ForeignKey("trips.id"), nullable=True)
+    maintenance_id = Column(Integer, ForeignKey("maintenance_logs.id"), nullable=True)
+    note = Column(String, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    vehicle = relationship("Vehicle")
+    driver = relationship("Driver")
+    trip = relationship("Trip")
+    maintenance = relationship("MaintenanceLog")

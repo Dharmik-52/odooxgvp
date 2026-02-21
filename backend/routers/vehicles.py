@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Optional, List
+from datetime import date
 
 from database import get_db
-from models import User, Vehicle, VehicleStatus
+from models import User, Vehicle, VehicleStatus, UnifiedExpense, ExpenseCategory
 from schemas import VehicleCreate, VehicleUpdate, VehicleResponse
 from auth import get_current_user, require_role
 
@@ -57,6 +58,20 @@ def create_vehicle(
     db.add(vehicle)
     db.commit()
     db.refresh(vehicle)
+
+    if vehicle.acquisition_cost and vehicle.acquisition_cost > 0:
+        expense = UnifiedExpense(
+            category=ExpenseCategory.Vehicle_Acquisition,
+            source_module="Vehicles",
+            source_id=vehicle.id,
+            description=f"Vehicle acquisition: {vehicle.name} ({vehicle.license_plate})",
+            amount=vehicle.acquisition_cost,
+            date=date.today(),
+            vehicle_id=vehicle.id
+        )
+        db.add(expense)
+        db.commit()
+
     return vehicle
 
 

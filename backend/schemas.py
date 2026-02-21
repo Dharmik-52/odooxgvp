@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, ConfigDict
 from datetime import date, datetime
 from typing import Optional, List
-from models import UserRole, VehicleType, VehicleStatus, DutyStatus, TripStatus, MaintenanceStatus
+from models import UserRole, VehicleType, VehicleStatus, DutyStatus, TripStatus, MaintenanceStatus, ExpenseCategory
 
 
 class UserCreate(BaseModel):
@@ -227,3 +227,56 @@ class AnalyticsReports(BaseModel):
     monthly_summary: List[MonthlySummary]
     costliest_vehicles: List[VehicleCost]
     dead_stock: List[dict]
+
+
+class UnifiedExpenseBase(BaseModel):
+    category: ExpenseCategory
+    source_module: str
+    source_id: Optional[int] = None
+    description: str
+    amount: float
+    date: date
+    vehicle_id: Optional[int] = None
+    driver_id: Optional[int] = None
+    trip_id: Optional[int] = None
+    maintenance_id: Optional[int] = None
+    note: Optional[str] = None
+
+
+class UnifiedExpenseCreate(BaseModel):
+    description: str
+    amount: float
+    date: date
+    vehicle_id: Optional[int] = None
+    driver_id: Optional[int] = None
+    note: Optional[str] = None
+
+
+class UnifiedExpenseResponse(UnifiedExpenseBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    created_at: datetime
+
+
+class ExpenseByCategory(BaseModel):
+    category: str
+    total: float
+
+
+class ExpenseByVehicle(BaseModel):
+    vehicle_id: int
+    vehicle_name: str
+    total_cost: float
+
+
+class ExpenseByMonth(BaseModel):
+    month: str
+    total: float
+
+
+class ExpenseSummary(BaseModel):
+    total: float
+    by_category: List[ExpenseByCategory]
+    by_vehicle: List[ExpenseByVehicle]
+    by_month: List[ExpenseByMonth]

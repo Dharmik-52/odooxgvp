@@ -4,7 +4,7 @@ from typing import Optional, List
 from datetime import date
 
 from database import get_db
-from models import User, Driver, DutyStatus
+from models import User, Driver, DutyStatus, UnifiedExpense, ExpenseCategory
 from schemas import DriverCreate, DriverUpdate, DriverResponse
 from auth import get_current_user
 
@@ -78,6 +78,19 @@ def create_driver(
     db.add(driver)
     db.commit()
     db.refresh(driver)
+
+    expense = UnifiedExpense(
+        category=ExpenseCategory.Driver_Compliance,
+        source_module="Drivers",
+        source_id=driver.id,
+        description=f"Driver onboarding: {driver.name}",
+        amount=0,
+        date=date.today(),
+        driver_id=driver.id
+    )
+    db.add(expense)
+    db.commit()
+
     return driver
 
 

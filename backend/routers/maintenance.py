@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from database import get_db
-from models import User, Vehicle, MaintenanceLog, VehicleStatus, MaintenanceStatus
+from models import User, Vehicle, MaintenanceLog, VehicleStatus, MaintenanceStatus, UnifiedExpense, ExpenseCategory
 from schemas import MaintenanceLogCreate, MaintenanceLogUpdate, MaintenanceLogResponse
 from auth import get_current_user
 
@@ -38,6 +38,21 @@ def create_maintenance_log(
 
     db.commit()
     db.refresh(maintenance_log)
+
+    if maintenance_log.cost and maintenance_log.cost > 0:
+        expense = UnifiedExpense(
+            category=ExpenseCategory.Maintenance_Repair,
+            source_module="Maintenance",
+            source_id=maintenance_log.id,
+            description=f"Maintenance: {maintenance_log.issue} on {vehicle.name}",
+            amount=maintenance_log.cost,
+            date=maintenance_log.service_date,
+            vehicle_id=maintenance_log.vehicle_id,
+            maintenance_id=maintenance_log.id
+        )
+        db.add(expense)
+        db.commit()
+
     return maintenance_log
 
 
