@@ -3,17 +3,17 @@ import { createContext, useContext, useState, useEffect } from "react";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser]                       = useState(null);
-  const [token, setToken]                     = useState(null);
-  const [role, setRole]                       = useState(null);
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [role, setRole] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading]             = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     try {
       const storedToken = localStorage.getItem("fleetflow_token");
-      const storedRole  = localStorage.getItem("fleetflow_role");
-      const storedName  = localStorage.getItem("fleetflow_user");
+      const storedRole = localStorage.getItem("fleetflow_role");
+      const storedName = localStorage.getItem("fleetflow_user");
 
       if (storedToken && storedRole) {
         setToken(storedToken);

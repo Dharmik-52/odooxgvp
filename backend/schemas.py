@@ -90,6 +90,7 @@ class DriverBase(BaseModel):
     name: str
     license_number: str
     license_expiry: date
+    user_id: Optional[int] = None
 
 
 class DriverCreate(DriverBase):

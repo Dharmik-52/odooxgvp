@@ -3,17 +3,21 @@ import { Suspense, lazy } from "react";
 import { useAuth } from "./context/AuthContext.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
-const Login        = lazy(() => import("./pages/Login.jsx"));
-const Register     = lazy(() => import("./pages/Register.jsx"));
-const Dashboard    = lazy(() => import("./pages/Dashboard.jsx"));
-const Vehicles     = lazy(() => import("./pages/Vehicles.jsx"));
+const Login = lazy(() => import("./pages/Login.jsx"));
+const Register = lazy(() => import("./pages/Register.jsx"));
+const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
+const Vehicles = lazy(() => import("./pages/Vehicles.jsx"));
 const TripDispatch = lazy(() => import("./pages/TripDispatch.jsx"));
-const Maintenance  = lazy(() => import("./pages/Maintenance.jsx"));
-const Expenses     = lazy(() => import("./pages/Expenses.jsx"));
-const Drivers      = lazy(() => import("./pages/Drivers.jsx"));
-const Analytics    = lazy(() => import("./pages/Analytics.jsx"));
+const Maintenance = lazy(() => import("./pages/Maintenance.jsx"));
+const Expenses = lazy(() => import("./pages/Expenses.jsx"));
+const Drivers = lazy(() => import("./pages/Drivers.jsx"));
+const Analytics = lazy(() => import("./pages/Analytics.jsx"));
 const Unauthorized = lazy(() => import("./pages/Unauthorized.jsx"));
-const MainLayout   = lazy(() => import("./components/layout/MainLayout.jsx"));
+const MainLayout = lazy(() => import("./components/layout/MainLayout.jsx"));
+
+const DriverDashboard = lazy(() => import("./pages/driver/DriverDashboard.jsx"));
+const ActiveTrip = lazy(() => import("./pages/driver/ActiveTrip.jsx"));
+const DriverExpenses = lazy(() => import("./pages/driver/DriverExpenses.jsx"));
 
 const Spinner = () => (
   <div style={{
@@ -35,10 +39,8 @@ function AppRoutes() {
   const { isAuthenticated, role } = useAuth();
 
   const home = {
-    manager:        "/dashboard",
-    dispatcher:     "/trips",
-    safety_officer: "/drivers",
-    analyst:        "/analytics"
+    manager: "/dashboard",
+    dispatcher: "/driver-dashboard",
   }[role] || "/dashboard";
 
   return (
@@ -74,26 +76,45 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
 
+        <Route path="/active-trip" element={
+          <ProtectedRoute allowedRoles={["dispatcher"]}>
+            <ActiveTrip />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/driver-dashboard" element={
+          <ProtectedRoute allowedRoles={["dispatcher"]}>
+            <DriverDashboard />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/driver-expenses" element={
+          <ProtectedRoute allowedRoles={["dispatcher"]}>
+            <DriverExpenses />
+          </ProtectedRoute>
+        } />
+
         <Route path="/maintenance" element={<Maintenance />} />
-        <Route path="/expenses"    element={<Expenses />} />
+        <Route path="/expenses" element={<Expenses />} />
 
         <Route path="/drivers" element={
-          <ProtectedRoute allowedRoles={["manager", "safety_officer"]}>
+          <ProtectedRoute allowedRoles={["manager"]}>
             <Drivers />
           </ProtectedRoute>
         } />
 
         <Route path="/analytics" element={
-          <ProtectedRoute allowedRoles={["manager", "analyst"]}>
+          <ProtectedRoute allowedRoles={["manager"]}>
             <Analytics />
           </ProtectedRoute>
         } />
+
       </Route>
 
       <Route path="*" element={
         <Navigate to={isAuthenticated ? home : "/login"} replace />
       } />
-    </Routes>
+    </Routes >
   );
 }
 

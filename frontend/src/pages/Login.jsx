@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { Eye, EyeOff, Loader2, Check, Truck } from 'lucide-react'
 import AuthInput from '../components/auth/AuthInput'
 import AuthCard from '../components/auth/AuthCard'
+import PasswordInput from '../components/auth/PasswordInput'
 
 function useScreenSize() {
   const [size, setSize] = useState({ width: 1200, isMobile: false })
@@ -35,12 +36,12 @@ export default function Login() {
 
   const { login: authLogin } = useAuth()
   const navigate = useNavigate()
-
+  const { login } = useAuth()
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
   const handleLogin = async (e) => {
     e.preventDefault()
-    
+
     let hasError = false
     if (!isValidEmail(email)) {
       setEmailError('Please enter a valid email address')
@@ -48,14 +49,14 @@ export default function Login() {
     } else {
       setEmailError('')
     }
-    
+
     if (!password) {
       setPasswordError('Password is required')
       hasError = true
     } else {
       setPasswordError('')
     }
-    
+
     if (hasError) return
 
     setIsLoading(true)
@@ -64,10 +65,9 @@ export default function Login() {
     try {
       const res = await apiLogin(email, password)
       const { access_token, role, full_name } = res
-      
+
       authLogin(access_token, { role, full_name })
       toast.success(`Welcome back, ${full_name}!`)
-      
     } catch (err) {
       if (err.response?.status === 401) {
         setApiError('Invalid email or password. Please try again.')
@@ -85,7 +85,7 @@ export default function Login() {
       toast.error('Please enter your email')
       return
     }
-    
+
     setForgotLoading(true)
     try {
       await forgotPassword(forgotEmail)
@@ -125,15 +125,14 @@ export default function Login() {
   }
 
   return (
-    <div style={pageStyle} className="min-h-screen">
-      <div 
-        className="absolute inset-0" 
+    <div className="min-h-screen bg-[#0D1117] flex items-center justify-center p-4 relative overflow-hidden" style={pageStyle}>
+      <div
+        className="absolute inset-0"
         style={{
           backgroundImage: 'radial-gradient(circle, #30363D 1px, transparent 1px)',
           backgroundSize: '24px 24px'
         }}
       />
-      
       <div className={`relative w-full max-w-[440px] animate-card-enter ${isMobile ? 'p-5' : ''}`} style={isMobile ? { width: '100%', maxWidth: '100%', margin: 0, borderRadius: 0 } : {}}>
         <AuthCard title="Sign in" subtitle="Sign in to your account">
           <form onSubmit={handleLogin} className="space-y-5">
@@ -147,38 +146,14 @@ export default function Login() {
               placeholder="you@company.com"
             />
 
-            <div>
-              <label className="block text-gray-300 text-sm font-medium mb-1">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onBlur={handlePasswordBlur}
-                  placeholder="••••••••"
-                  className={`w-full h-11 px-4 pr-12 bg-[#0D1117] text-white border rounded-lg transition-all duration-200 placeholder-gray-500 focus:outline-none ${
-                    passwordError
-                      ? 'border-red-400 focus:border-red-400'
-                      : 'border-[#30363D] focus:border-green-400'
-                  }`}
-                  style={{
-                    boxShadow: passwordError ? 'none' : '0 0 0 3px rgba(74,222,128,0.1)'
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-              {passwordError && (
-                <p className="text-red-400 text-xs mt-1">{passwordError}</p>
-              )}
-            </div>
+            <PasswordInput
+              label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onBlur={handlePasswordBlur}
+              error={passwordError}
+              placeholder="••••••••"
+            />
 
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -231,10 +206,9 @@ export default function Login() {
             </p>
           </form>
 
-          <div 
-            className={`overflow-hidden transition-all duration-400 ease-in-out ${
-              showForgotPanel ? 'mt-4 max-h-[300px] opacity-100' : 'max-h-0 opacity-0'
-            }`}
+          <div
+            className={`overflow-hidden transition-all duration-400 ease-in-out ${showForgotPanel ? 'mt-4 max-h-[300px] opacity-100' : 'max-h-0 opacity-0'
+              }`}
           >
             <div className="bg-[#0D1117] border border-[#30363D] rounded-lg p-4">
               {forgotSuccess ? (

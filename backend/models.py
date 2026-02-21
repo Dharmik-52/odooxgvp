@@ -9,8 +9,6 @@ from database import Base
 class UserRole(str, enum.Enum):
     manager = "manager"
     dispatcher = "dispatcher"
-    safety_officer = "safety_officer"
-    analyst = "analyst"
 
 
 class VehicleType(str, enum.Enum):

@@ -4,7 +4,7 @@ from typing import Optional, List
 from datetime import date, datetime
 
 from database import get_db
-from models import User, Vehicle, Driver, Trip, VehicleStatus, DutyStatus, TripStatus, UnifiedExpense, ExpenseCategory
+from models import User, Vehicle, Driver, Trip, VehicleStatus, DutyStatus, TripStatus, UnifiedExpense, ExpenseCategory, UserRole
 from schemas import TripCreate, TripUpdate, TripResponse, TripStatusUpdate
 from auth import get_current_user
 
@@ -27,6 +27,40 @@ def get_trips(
     if driver_id:
         query = query.filter(Trip.driver_id == driver_id)
     return query.order_by(Trip.created_at.desc()).all()
+
+
+@router.get("/driver/current", response_model=TripResponse)
+def get_current_driver_trip(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Ensure only drivers can access this
+    if current_user.role != UserRole.dispatcher:  # Note: currently driver seeded as dispatcher role
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only drivers can access their current trip"
+        )
+        
+    driver = db.query(Driver).filter(Driver.user_id == current_user.id).first()
+    if not driver:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Driver profile not found for the current user"
+        )
+
+    # Fetch currently active trips (Dispatched status) for this driver
+    active_trip = db.query(Trip).filter(
+        Trip.driver_id == driver.id,
+        Trip.status == TripStatus.Dispatched
+    ).first()
+    
+    if not active_trip:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No active trip found for the driver"
+        )
+        
+    return active_trip
 
 
 @router.get("/{trip_id}", response_model=TripResponse)

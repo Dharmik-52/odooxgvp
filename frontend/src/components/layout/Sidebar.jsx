@@ -8,20 +8,34 @@ import {
 } from "lucide-react";
 
 const NAV = [
-  { label: "Dashboard",       path: "/dashboard",  icon: LayoutDashboard,
-    roles: ["manager","dispatcher","safety_officer","analyst"] },
-  { label: "Vehicle Registry", path: "/vehicles",   icon: Truck,
-    roles: ["manager"] },
-  { label: "Trip Dispatch",   path: "/trips",       icon: MapPin,
-    roles: ["manager","dispatcher"] },
-  { label: "Maintenance",     path: "/maintenance", icon: Wrench,
-    roles: ["manager","safety_officer"] },
-  { label: "Expenses",        path: "/expenses",    icon: Receipt,
-    roles: ["manager","analyst"] },
-  { label: "Drivers",         path: "/drivers",     icon: Users,
-    roles: ["manager","safety_officer"] },
-  { label: "Analytics",       path: "/analytics",   icon: BarChart2,
-    roles: ["manager","analyst"] },
+  {
+    label: "Dashboard", path: "/dashboard", icon: LayoutDashboard,
+    roles: ["manager", "dispatcher"]
+  },
+  {
+    label: "Vehicle Registry", path: "/vehicles", icon: Truck,
+    roles: ["manager"]
+  },
+  {
+    label: "Trip Dispatch", path: "/trips", icon: MapPin,
+    roles: ["manager", "dispatcher"]
+  },
+  {
+    label: "Maintenance", path: "/maintenance", icon: Wrench,
+    roles: ["manager"]
+  },
+  {
+    label: "Expenses", path: "/expenses", icon: Receipt,
+    roles: ["manager"]
+  },
+  {
+    label: "Drivers", path: "/drivers", icon: Users,
+    roles: ["manager"]
+  },
+  {
+    label: "Analytics", path: "/analytics", icon: BarChart2,
+    roles: ["manager"]
+  },
 ];
 
 export default function Sidebar() {
@@ -71,8 +85,10 @@ export default function Sidebar() {
         {isMobile && (
           <button
             onClick={() => setIsOpen(false)}
-            style={{ background: "none", border: "none",
-                     cursor: "pointer", color: "#9ca3af" }}
+            style={{
+              background: "none", border: "none",
+              cursor: "pointer", color: "#9ca3af"
+            }}
           >
             <X size={20} />
           </button>

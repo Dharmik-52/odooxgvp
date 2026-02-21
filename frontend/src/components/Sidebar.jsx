@@ -1,25 +1,28 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { 
-  LayoutDashboard, 
-  Truck, 
-  Route, 
-  Wrench, 
-  Receipt, 
-  Users, 
+import {
+  LayoutDashboard,
+  Truck,
+  Route,
+  Wrench,
+  Receipt,
+  Users,
   BarChart3,
   LogOut,
   Menu
 } from 'lucide-react'
 
 const navItems = [
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['manager', 'dispatcher', 'safety_officer', 'analyst'] },
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['manager'] },
+  { path: '/driver-dashboard', label: 'My Dashboard', icon: LayoutDashboard, roles: ['dispatcher'] }, // Assuming dispatcher = driver for now
   { path: '/vehicles', label: 'Vehicles', icon: Truck, roles: ['manager'] },
-  { path: '/trips', label: 'Trip Dispatch', icon: Route, roles: ['manager', 'dispatcher'] },
-  { path: '/maintenance', label: 'Maintenance', icon: Wrench, roles: ['manager', 'dispatcher'] },
-  { path: '/expenses', label: 'Expenses', icon: Receipt, roles: ['manager', 'dispatcher'] },
-  { path: '/drivers', label: 'Drivers', icon: Users, roles: ['manager', 'safety_officer'] },
-  { path: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['manager', 'analyst'] },
+  { path: '/trips', label: 'Trip Dispatch', icon: Route, roles: ['manager'] },
+  { path: '/active-trip', label: 'Active Trip', icon: Route, roles: ['dispatcher'] },
+  { path: '/maintenance', label: 'Maintenance', icon: Wrench, roles: ['manager'] },
+  { path: '/expenses', label: 'Fleet Expenses', icon: Receipt, roles: ['manager'] },
+  { path: '/driver-expenses', label: 'Log Expense', icon: Receipt, roles: ['dispatcher'] },
+  { path: '/drivers', label: 'Drivers', icon: Users, roles: ['manager'] },
+  { path: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['manager'] },
 ]
 
 export default function Sidebar() {
@@ -50,10 +53,9 @@ export default function Sidebar() {
               <NavLink
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-ff-green/10 text-ff-green border-l-2 border-ff-green'
-                      : 'text-gray-400 hover:bg-ff-bg hover:text-white'
+                  `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors border-l-2 ${isActive
+                    ? 'bg-ff-green/10 text-ff-green border-ff-green'
+                    : 'border-transparent text-gray-400 hover:bg-ff-bg hover:text-white'
                   }`
                 }
               >

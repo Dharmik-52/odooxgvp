@@ -1,8 +1,10 @@
 import { Truck } from 'lucide-react'
 
-export default function AuthCard({ title, subtitle, children }) {
+export default function AuthCard({ title, subtitle, className = '', children }) {
+  const cardWidthClass = className.includes('max-w-') ? className : `max-w-[440px] ${className}`
+
   return (
-    <div className="relative w-full max-w-[440px] animate-card-enter">
+    <div className={`relative w-full animate-card-enter ${cardWidthClass}`.trim()}>
       <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-10 shadow-2xl">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-1">

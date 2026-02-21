@@ -34,9 +34,31 @@ def seed_database(drop_all=False):
             email="admin@fleetflow.com",
             hashed_password=get_password_hash("admin123"),
             role=UserRole.manager,
+            full_name="System Admin",
             is_active=True
         )
         db.add(admin_user)
+        
+        print("Seeding driver users...")
+        driver_user1 = User(
+            email="john@fleetflow.com",
+            hashed_password=get_password_hash("driver123"),
+            role=UserRole.dispatcher,  # Might need a specific 'driver' role if we add one, or use dispatcher for now
+            full_name="John Smith",
+            is_active=True
+        )
+        driver_user2 = User(
+            email="maria@fleetflow.com",
+            hashed_password=get_password_hash("driver123"),
+            role=UserRole.dispatcher,
+            full_name="Maria Garcia",
+            is_active=True
+        )
+        db.add(driver_user1)
+        db.add(driver_user2)
+        db.commit()
+        db.refresh(driver_user1)
+        db.refresh(driver_user2)
         
         print("Seeding vehicles...")
         vehicles_data = [
@@ -49,8 +71,8 @@ def seed_database(drop_all=False):
         
         print("Seeding drivers...")
         drivers_data = [
-            Driver(name="John Smith", license_number="DL-111111", license_expiry=date(2027, 12, 31), completion_rate=95.0, safety_score=98.0, duty_status=DutyStatus.On_Duty),
-            Driver(name="Maria Garcia", license_number="DL-222222", license_expiry=date(2026, 6, 15), completion_rate=88.0, safety_score=92.0, duty_status=DutyStatus.On_Duty),
+            Driver(name="John Smith", license_number="DL-111111", license_expiry=date(2027, 12, 31), completion_rate=95.0, safety_score=98.0, duty_status=DutyStatus.On_Duty, user_id=driver_user1.id),
+            Driver(name="Maria Garcia", license_number="DL-222222", license_expiry=date(2026, 6, 15), completion_rate=88.0, safety_score=92.0, duty_status=DutyStatus.On_Duty, user_id=driver_user2.id),
             Driver(name="James Wilson", license_number="DL-333333", license_expiry=date(2025, 3, 20), completion_rate=100.0, safety_score=100.0, duty_status=DutyStatus.On_Duty),
         ]
         for d in drivers_data:
@@ -68,7 +90,7 @@ def seed_database(drop_all=False):
             Trip(vehicle_id=vehicles_data[0].id, driver_id=drivers_data[0].id, cargo_weight_kg=800, origin="Mumbai", destination="Pune", status=TripStatus.Completed, estimated_fuel_cost=2500, actual_fuel_cost=2300, final_odometer=45200, completed_at=datetime.utcnow() - timedelta(days=2)),
             Trip(vehicle_id=vehicles_data[1].id, driver_id=drivers_data[1].id, cargo_weight_kg=3200, origin="Delhi", destination="Jaipur", status=TripStatus.Completed, estimated_fuel_cost=4500, actual_fuel_cost=4200, final_odometer=78500, completed_at=datetime.utcnow() - timedelta(days=5)),
             Trip(vehicle_id=vehicles_data[0].id, driver_id=drivers_data[2].id, cargo_weight_kg=1000, origin="Mumbai", destination="Ahmedabad", status=TripStatus.Dispatched, estimated_fuel_cost=3500),
-            Trip(vehicle_id=vehicles_data[1].id, driver_id=drivers_data[0].id, cargo_weight_kg=2500, origin="Delhi", destination="Chandigarh", status=TripStatus.Draft, estimated_fuel_cost=3000),
+            Trip(vehicle_id=vehicles_data[1].id, driver_id=drivers_data[0].id, cargo_weight_kg=2500, origin="Delhi", destination="Chandigarh", status=TripStatus.Dispatched, estimated_fuel_cost=3000), # Driver 0 (John) now has a dispatched trip
             Trip(vehicle_id=vehicles_data[2].id, driver_id=drivers_data[1].id, cargo_weight_kg=100, origin="Bangalore", destination="Mysore", status=TripStatus.Cancelled, estimated_fuel_cost=500),
         ]
         for t in trips_data:
