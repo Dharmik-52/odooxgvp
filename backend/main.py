@@ -1,12 +1,24 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import uvicorn
 
 from database import engine, Base
 from routers import auth, vehicles, drivers, trips, maintenance, expenses, analytics
 from seed import seed_database
 
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(title="FleetFlow API", version="1.0.0")
+
+app.state.limiter = limiter
+
+def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+    return {"error": "Rate limit exceeded", "detail": str(exc)}
+
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,

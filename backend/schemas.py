@@ -122,6 +122,9 @@ class TripBase(BaseModel):
     cargo_weight_kg: float
     origin: str
     destination: str
+    estimated_distance_km: float = 0.0
+    actual_distance_km: Optional[float] = None
+    revenue: float = 0.0
     estimated_fuel_cost: float = 0.0
 
 
@@ -133,6 +136,9 @@ class TripUpdate(BaseModel):
     cargo_weight_kg: Optional[float] = None
     origin: Optional[str] = None
     destination: Optional[str] = None
+    estimated_distance_km: Optional[float] = None
+    actual_distance_km: Optional[float] = None
+    revenue: Optional[float] = None
     estimated_fuel_cost: Optional[float] = None
     actual_fuel_cost: Optional[float] = None
     final_odometer: Optional[float] = None
@@ -141,6 +147,7 @@ class TripUpdate(BaseModel):
 class TripStatusUpdate(BaseModel):
     status: TripStatus
     final_odometer: Optional[float] = None
+    actual_distance_km: Optional[float] = None
     actual_fuel_cost: Optional[float] = None
 
 
@@ -166,6 +173,7 @@ class TripResponse(TripBase):
 
     id: int
     status: TripStatus
+    actual_distance_km: Optional[float] = None
     actual_fuel_cost: Optional[float] = None
     final_odometer: Optional[float] = None
     created_at: datetime

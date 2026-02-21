@@ -11,6 +11,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadStats()
+    const interval = setInterval(loadStats, 5000)
+    return () => clearInterval(interval)
   }, [])
 
   const loadStats = async () => {

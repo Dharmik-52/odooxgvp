@@ -22,6 +22,8 @@ export default function TripDispatch() {
     cargo_weight_kg: '',
     origin: '',
     destination: '',
+    estimated_distance_km: '',
+    revenue: '',
     estimated_fuel_cost: '',
   })
   const [formError, setFormError] = useState('')
@@ -62,6 +64,8 @@ export default function TripDispatch() {
       await createTrip({
         ...formData,
         cargo_weight_kg: parseFloat(formData.cargo_weight_kg),
+        estimated_distance_km: parseFloat(formData.estimated_distance_km) || 0,
+        revenue: parseFloat(formData.revenue) || 0,
         estimated_fuel_cost: parseFloat(formData.estimated_fuel_cost) || 0,
       })
       toast.success('Trip created')
@@ -75,6 +79,7 @@ export default function TripDispatch() {
 
   const handleComplete = async (trip) => {
     const finalOdometer = prompt('Enter final odometer reading:', trip.vehicle?.odometer_km || '')
+    const actualDistance = prompt('Enter actual distance (km):', trip.estimated_distance_km || '')
     const actualFuelCost = prompt('Enter actual fuel cost:', trip.estimated_fuel_cost || '')
     
     if (finalOdometer === null) return
@@ -84,6 +89,7 @@ export default function TripDispatch() {
         trip.id, 
         'Completed', 
         parseFloat(finalOdometer) || null,
+        parseFloat(actualDistance) || null,
         parseFloat(actualFuelCost) || null
       )
       toast.success('Trip completed')
@@ -111,6 +117,8 @@ export default function TripDispatch() {
       cargo_weight_kg: '',
       origin: '',
       destination: '',
+      estimated_distance_km: '',
+      revenue: '',
       estimated_fuel_cost: '',
     })
     setFormError('')
@@ -227,7 +235,21 @@ export default function TripDispatch() {
             placeholder="Pune"
           />
           <FormField
-            label="Estimated Fuel Cost"
+            label="Est. Distance (km)"
+            type="number"
+            value={formData.estimated_distance_km}
+            onChange={(v) => setFormData({ ...formData, estimated_distance_km: v })}
+            placeholder="150"
+          />
+          <FormField
+            label="Revenue"
+            type="number"
+            value={formData.revenue}
+            onChange={(v) => setFormData({ ...formData, revenue: v })}
+            placeholder="5000"
+          />
+          <FormField
+            label="Est. Fuel Cost"
             type="number"
             value={formData.estimated_fuel_cost}
             onChange={(v) => setFormData({ ...formData, estimated_fuel_cost: v })}
