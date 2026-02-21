@@ -1,97 +1,296 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { Link, useNavigate } from 'react-router-dom'
+import { login, forgotPassword } from '../api/auth'
 import toast from 'react-hot-toast'
-import { Truck, Mail, Lock } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Check, Truck } from 'lucide-react'
+import AuthInput from '../components/auth/AuthInput'
+import AuthCard from '../components/auth/AuthCard'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const { login } = useAuth()
+  const [emailError, setEmailError] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [apiError, setApiError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
+  const [showForgotPanel, setShowForgotPanel] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotSuccess, setForgotSuccess] = useState(false)
+  const [forgotLoading, setForgotLoading] = useState(false)
+
   const navigate = useNavigate()
 
-  const handleSubmit = async (e) => {
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+
+  const handleLogin = async (e) => {
     e.preventDefault()
-    if (!email || !password) {
-      toast.error('Please fill in all fields')
+    
+    let hasError = false
+    if (!isValidEmail(email)) {
+      setEmailError('Please enter a valid email address')
+      hasError = true
+    } else {
+      setEmailError('')
+    }
+    
+    if (!password) {
+      setPasswordError('Password is required')
+      hasError = true
+    } else {
+      setPasswordError('')
+    }
+    
+    if (hasError) return
+
+    setIsLoading(true)
+    setApiError('')
+
+    try {
+      const res = await login(email, password)
+      const { access_token, role, full_name } = res
+      
+      localStorage.setItem('fleetflow_token', access_token)
+      localStorage.setItem('fleetflow_role', role)
+      localStorage.setItem('fleetflow_user', full_name)
+      
+      toast.success(`Welcome back, ${full_name}!`)
+      
+      const roleRoutes = {
+        manager: '/dashboard',
+        dispatcher: '/trips',
+        safety_officer: '/drivers',
+        analyst: '/analytics'
+      }
+      navigate(roleRoutes[role] || '/dashboard')
+      
+    } catch (err) {
+      if (err.response?.status === 401) {
+        setApiError('Invalid email or password. Please try again.')
+      } else {
+        toast.error('Server error. Please try again.')
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault()
+    if (!forgotEmail) {
+      toast.error('Please enter your email')
       return
     }
-
-    setLoading(true)
+    
+    setForgotLoading(true)
     try {
-      await login(email, password)
-      toast.success('Login successful!')
-      navigate('/dashboard')
+      await forgotPassword(forgotEmail)
+      setForgotSuccess(true)
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Login failed')
+      toast.error('Something went wrong. Please try again.')
     } finally {
-      setLoading(false)
+      setForgotLoading(false)
+    }
+  }
+
+  const handleEmailBlur = () => {
+    if (email && !isValidEmail(email)) {
+      setEmailError('Please enter a valid email address')
+    } else {
+      setEmailError('')
+    }
+  }
+
+  const handlePasswordBlur = () => {
+    if (!password) {
+      setPasswordError('Password is required')
+    } else {
+      setPasswordError('')
     }
   }
 
   return (
-    <div className="min-h-screen bg-ff-bg flex items-center justify-center p-4">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-ff-green/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-ff-blue/5 rounded-full blur-3xl" />
-      </div>
-
-      <div className="relative w-full max-w-md">
-        <div className="bg-ff-card border border-ff-border rounded-2xl p-8 shadow-2xl">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-ff-green/10 rounded-2xl mb-4">
-              <Truck className="w-8 h-8 text-ff-green" />
-            </div>
-            <h1 className="text-3xl font-bold text-white">FleetFlow</h1>
-            <p className="text-gray-400 mt-2">Fleet & Logistics Management</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@fleetflow.com"
-                  className="w-full pl-12 pr-4 py-3 bg-ff-bg border border-ff-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-ff-green/50 focus:border-ff-green"
-                />
-              </div>
-            </div>
+    <div className="min-h-screen bg-[#0D1117] flex items-center justify-center p-4 relative overflow-hidden">
+      <div 
+        className="absolute inset-0" 
+        style={{
+          backgroundImage: 'radial-gradient(circle, #30363D 1px, transparent 1px)',
+          backgroundSize: '24px 24px'
+        }}
+      />
+      
+      <div className="relative w-full max-w-[440px] animate-card-enter">
+        <AuthCard title="Sign in" subtitle="Sign in to your account">
+          <form onSubmit={handleLogin} className="space-y-5">
+            <AuthInput
+              label="Email Address"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={handleEmailBlur}
+              error={emailError}
+              placeholder="you@company.com"
+            />
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
+              <label className="block text-gray-300 text-sm font-medium mb-1">
+                Password
+              </label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onBlur={handlePasswordBlur}
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-4 py-3 bg-ff-bg border border-ff-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-ff-green/50 focus:border-ff-green"
+                  className={`w-full h-11 px-4 pr-12 bg-[#0D1117] text-white border rounded-lg transition-all duration-200 placeholder-gray-500 focus:outline-none ${
+                    passwordError
+                      ? 'border-red-400 focus:border-red-400'
+                      : 'border-[#30363D] focus:border-green-400'
+                  }`}
+                  style={{
+                    boxShadow: passwordError ? 'none' : '0 0 0 3px rgba(74,222,128,0.1)'
+                  }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
+              {passwordError && (
+                <p className="text-red-400 text-xs mt-1">{passwordError}</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-[#30363D] accent-green-400 bg-[#0D1117]"
+                />
+                <span className="text-gray-400 text-sm">Remember me</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowForgotPanel(!showForgotPanel)}
+                className="text-green-400 text-sm hover:text-green-300 cursor-pointer underline-offset-2 hover:underline"
+              >
+                Forgot password?
+              </button>
             </div>
 
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-ff-green text-ff-bg font-semibold rounded-lg hover:bg-ff-green/90 transition-colors disabled:opacity-50"
+              disabled={isLoading}
+              className="w-full h-11 bg-green-500 hover:bg-green-400 text-black font-semibold rounded-lg transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin border-2 border-black border-t-transparent rounded-full" />
+              ) : (
+                'Sign In'
+              )}
             </button>
+
+            {apiError && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mt-3">
+                <p className="text-red-400 text-sm text-center">{apiError}</p>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 my-6">
+              <div className="flex-1 border border-[#30363D]" />
+              <span className="text-gray-500 text-sm">or</span>
+              <div className="flex-1 border border-[#30363D]" />
+            </div>
+
+            <p className="text-center text-gray-400 text-sm">
+              Don't have an account?{' '}
+              <Link to="/register" className="text-green-400 hover:text-green-300">
+                Create one →
+              </Link>
+            </p>
           </form>
 
-          <div className="mt-6 p-4 bg-ff-bg rounded-lg">
-            <p className="text-sm text-gray-400 text-center">
-              Default login: <span className="text-white">admin@fleetflow.com</span> / <span className="text-white">admin123</span>
-            </p>
+          <div 
+            className={`overflow-hidden transition-all duration-400 ease-in-out ${
+              showForgotPanel ? 'mt-4 max-h-[300px] opacity-100' : 'max-h-0 opacity-0'
+            }`}
+          >
+            <div className="bg-[#0D1117] border border-[#30363D] rounded-lg p-4">
+              {forgotSuccess ? (
+                <div className="text-center py-2">
+                  <Check className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                  <p className="text-green-400 text-sm font-medium">Check your inbox!</p>
+                  <p className="text-gray-400 text-xs mt-1">
+                    A reset link has been sent to {forgotEmail}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <h4 className="text-white text-sm font-semibold">Reset your password</h4>
+                  <p className="text-gray-400 text-xs mt-1 mb-3">
+                    Enter your email and we'll send you a reset link.
+                  </p>
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="you@company.com"
+                    className="w-full h-9 px-3 bg-[#0D1117] text-white border border-[#30363D] rounded-md placeholder-gray-500 focus:outline-none focus:border-green-400 text-sm"
+                  />
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowForgotPanel(false)
+                        setForgotSuccess(false)
+                        setForgotEmail('')
+                      }}
+                      className="flex-1 h-9 bg-transparent border border-[#30363D] text-gray-400 text-sm font-medium rounded-md hover:bg-[#30363D] transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      disabled={forgotLoading}
+                      className="flex-1 h-9 bg-green-500 hover:bg-green-400 text-black text-sm font-medium rounded-md transition-colors disabled:opacity-50 flex items-center justify-center"
+                    >
+                      {forgotLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        'Send Reset Link'
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        </AuthCard>
       </div>
+
+      <style>{`
+        @keyframes card-enter {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-card-enter {
+          animation: card-enter 0.4s ease;
+        }
+      `}</style>
     </div>
   )
 }

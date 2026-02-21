@@ -1,39 +1,68 @@
-import api from './axios'
+import axiosInstance from './axios'
 
-export const getExpenses = async (filters = {}) => {
-  const params = new URLSearchParams()
-  if (filters.category) params.append('category', filters.category)
-  if (filters.source_module) params.append('source_module', filters.source_module)
-  if (filters.vehicle_id) params.append('vehicle_id', filters.vehicle_id)
-  if (filters.driver_id) params.append('driver_id', filters.driver_id)
-  if (filters.date_from) params.append('date_from', filters.date_from)
-  if (filters.date_to) params.append('date_to', filters.date_to)
+export const getExpenses = async (params = {}) => {
+  const {
+    search = "",
+    category = "",
+    source_module = "",
+    vehicle_id = "",
+    driver_id = "",
+    amount_min = null,
+    amount_max = null,
+    date_from = null,
+    date_to = null,
+    sort_by = "date",
+    sort_order = "desc",
+    page = 1,
+    per_page = 20
+  } = params
+
+  const queryParams = {}
   
-  const response = await api.get(`/expenses/?${params.toString()}`)
+  if (search) queryParams.search = search
+  if (category) queryParams.category = category
+  if (source_module) queryParams.source_module = source_module
+  if (vehicle_id) queryParams.vehicle_id = vehicle_id
+  if (driver_id) queryParams.driver_id = driver_id
+  if (amount_min !== null) queryParams.amount_min = amount_min
+  if (amount_max !== null) queryParams.amount_max = amount_max
+  if (date_from) queryParams.date_from = date_from
+  if (date_to) queryParams.date_to = date_to
+  queryParams.sort_by = sort_by
+  queryParams.sort_order = sort_order
+  queryParams.page = page
+  queryParams.per_page = per_page
+  
+  const response = await axiosInstance.get("/expenses/", { params: queryParams })
+  return response.data
+}
+
+export const getExpenseCategories = async () => {
+  const response = await axiosInstance.get("/expenses/categories")
   return response.data
 }
 
 export const getExpenseSummary = async () => {
-  const response = await api.get('/expenses/summary')
+  const response = await axiosInstance.get('/expenses/summary')
   return response.data
 }
 
 export const createExpense = async (data) => {
-  const response = await api.post('/expenses/', data)
+  const response = await axiosInstance.post('/expenses/', data)
   return response.data
 }
 
 export const deleteExpense = async (id) => {
-  const response = await api.delete(`/expenses/${id}`)
+  const response = await axiosInstance.delete(`/expenses/${id}`)
   return response.data
 }
 
 export const getVehicleCost = async (vehicleId) => {
-  const response = await api.get(`/expenses/vehicle/${vehicleId}`)
+  const response = await axiosInstance.get(`/expenses/vehicle/${vehicleId}`)
   return response.data
 }
 
 export const getExpensesSummary = async () => {
-  const response = await api.get('/expenses/summary')
+  const response = await axiosInstance.get('/expenses/summary')
   return response.data
 }

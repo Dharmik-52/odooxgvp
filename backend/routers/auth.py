@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from database import get_db
 from models import User
-from schemas import UserCreate, UserResponse, Token
+from schemas import UserRegisterRequest, UserLoginRequest, UserResponse, TokenResponse, ForgotPasswordRequest
 from auth import (
     get_password_hash,
     verify_password,
@@ -17,38 +17,43 @@ from auth import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=UserResponse)
-def register(user_data: UserCreate, db: Session = Depends(get_db)):
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def register(user_data: UserRegisterRequest, db: Session = Depends(get_db)):
+    try:
+        existing_user = db.query(User).filter(User.email == user_data.email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An account with this email already exists"
+            )
+
+        hashed_password = get_password_hash(user_data.password)
+        user = User(
+            full_name=user_data.full_name,
+            email=user_data.email,
+            hashed_password=hashed_password,
+            role=user_data.role
         )
-
-    hashed_password = get_password_hash(user_data.password)
-    user = User(
-        email=user_data.email,
-        hashed_password=hashed_password,
-        role=user_data.role
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
+    except Exception as e:
+        db.rollback()
+        print(f"Register error: {e}")
+        raise
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login")
 def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    login_data: UserLoginRequest,
     db: Session = Depends(get_db)
 ):
-    user = db.query(User).filter(User.email == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    user = db.query(User).filter(User.email == login_data.email).first()
+    if not user or not verify_password(login_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="Invalid email or password"
         )
 
     if not user.is_active:
@@ -59,10 +64,27 @@ def login(
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email},
+        data={
+            "sub": user.email,
+            "role": user.role.value,
+            "name": user.full_name or ""
+        },
         expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    
+    return TokenResponse(
+        access_token=access_token,
+        token_type="bearer",
+        role=user.role.value,
+        full_name=user.full_name or "",
+        email=user.email
+    )
+
+
+@router.post("/forgot-password")
+def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == request.email).first()
+    return {"message": "If this email exists, a reset link has been sent."}
 
 
 @router.get("/me", response_model=UserResponse)

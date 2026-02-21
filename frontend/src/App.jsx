@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './pages/Login'
+import Register from './pages/Register'
+import Unauthorized from './pages/Unauthorized'
 import Dashboard from './pages/Dashboard'
 import Vehicles from './pages/Vehicles'
 import TripDispatch from './pages/TripDispatch'
@@ -18,7 +20,7 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
   
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/unauthorized" replace />
   }
   
   return children
@@ -36,13 +38,31 @@ function AppLayout({ children }) {
 }
 
 function AppRoutes() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, role } = useAuth()
+  
+  const getDefaultRoute = () => {
+    const rolePaths = {
+      manager: '/dashboard',
+      dispatcher: '/trips',
+      safety_officer: '/drivers',
+      analyst: '/analytics'
+    }
+    return rolePaths[role] || '/dashboard'
+  }
   
   return (
     <Routes>
       <Route 
         path="/login" 
-        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} 
+        element={isAuthenticated ? <Navigate to={getDefaultRoute()} replace /> : <Login />} 
+      />
+      <Route 
+        path="/register" 
+        element={isAuthenticated ? <Navigate to={getDefaultRoute()} replace /> : <Register />} 
+      />
+      <Route 
+        path="/unauthorized" 
+        element={<Unauthorized />} 
       />
       <Route
         path="/dashboard"

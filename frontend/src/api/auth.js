@@ -1,22 +1,21 @@
-import api from './axios'
+import axiosInstance from './axios'
 
 export const login = async (email, password) => {
-  const formData = new URLSearchParams()
-  formData.append('username', email)
-  formData.append('password', password)
-  
-  const response = await api.post('/auth/login', formData, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-  })
+  const response = await axiosInstance.post('/auth/login', { email, password })
   return response.data
 }
 
-export const register = async (userData) => {
-  const response = await api.post('/auth/register', userData)
+export const register = async (full_name, email, password, role) => {
+  const response = await axiosInstance.post('/auth/register', { full_name, email, password, role })
   return response.data
 }
 
-export const getCurrentUser = async () => {
-  const response = await api.get('/auth/me')
+export const forgotPassword = async (email) => {
+  const response = await axiosInstance.post('/auth/forgot-password', { email })
+  return response.data
+}
+
+export const getMe = async () => {
+  const response = await axiosInstance.get('/auth/me')
   return response.data
 }

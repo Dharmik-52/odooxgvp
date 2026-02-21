@@ -1,34 +1,54 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func, or_, cast, String
 from typing import Optional, List
 from datetime import date
 
 from database import get_db
-from models import User, UnifiedExpense, Vehicle, ExpenseCategory
-from schemas import UnifiedExpenseCreate, UnifiedExpenseResponse, ExpenseSummary, ExpenseByCategory, ExpenseByVehicle, ExpenseByMonth
+from models import User, UnifiedExpense, Vehicle, Driver, ExpenseCategory
+from schemas import UnifiedExpenseCreate, UnifiedExpenseResponse, UnifiedExpensePaginatedResponse, ExpenseSummary, ExpenseByCategory, ExpenseByVehicle, ExpenseByMonth
 from auth import get_current_user
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
 
-@router.get("/", response_model=List[UnifiedExpenseResponse])
+@router.get("/", response_model=UnifiedExpensePaginatedResponse)
 def get_expenses(
+    search: Optional[str] = None,
     category: Optional[str] = None,
     source_module: Optional[str] = None,
     vehicle_id: Optional[int] = None,
     driver_id: Optional[int] = None,
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,
+    amount_min: Optional[float] = None,
+    amount_max: Optional[float] = None,
+    sort_by: Optional[str] = "date",
+    sort_order: Optional[str] = "desc",
+    page: int = 1,
+    per_page: int = 20,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(UnifiedExpense)
+    query = db.query(UnifiedExpense).outerjoin(Vehicle, UnifiedExpense.vehicle_id == Vehicle.id).outerjoin(Driver, UnifiedExpense.driver_id == Driver.id)
+    
+    if search:
+        query = query.filter(or_(
+            UnifiedExpense.description.ilike(f"%{search}%"),
+            Vehicle.name.ilike(f"%{search}%"),
+            Driver.name.ilike(f"%{search}%"),
+            UnifiedExpense.source_module.ilike(f"%{search}%"),
+            cast(UnifiedExpense.trip_id, String).ilike(f"%{search}%")
+        ))
     
     if category:
-        query = query.filter(UnifiedExpense.category == category)
+        categories_list = category.split(",")
+        query = query.filter(UnifiedExpense.category.in_(categories_list))
+    
     if source_module:
-        query = query.filter(UnifiedExpense.source_module == source_module)
+        sources_list = source_module.split(",")
+        query = query.filter(UnifiedExpense.source_module.in_(sources_list))
+    
     if vehicle_id:
         query = query.filter(UnifiedExpense.vehicle_id == vehicle_id)
     if driver_id:
@@ -37,8 +57,58 @@ def get_expenses(
         query = query.filter(UnifiedExpense.date >= date_from)
     if date_to:
         query = query.filter(UnifiedExpense.date <= date_to)
+    if amount_min is not None:
+        query = query.filter(UnifiedExpense.amount >= amount_min)
+    if amount_max is not None:
+        query = query.filter(UnifiedExpense.amount <= amount_max)
     
-    return query.order_by(UnifiedExpense.date.desc()).all()
+    total = query.count()
+    total_pages = (total + per_page - 1) // per_page
+    
+    sort_column = UnifiedExpense.date
+    if sort_by == "amount":
+        sort_column = UnifiedExpense.amount
+    elif sort_by == "category":
+        sort_column = UnifiedExpense.category
+    elif sort_by == "source_module":
+        sort_column = UnifiedExpense.source_module
+    
+    if sort_order == "asc":
+        query = query.order_by(sort_column.asc())
+    else:
+        query = query.order_by(sort_column.desc())
+    
+    offset = (page - 1) * per_page
+    items = query.offset(offset).limit(per_page).all()
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": total_pages
+    }
+
+
+@router.get("/categories")
+def get_expense_categories(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    results = db.query(
+        UnifiedExpense.category,
+        func.count(UnifiedExpense.id).label("count"),
+        func.sum(UnifiedExpense.amount).label("total_amount")
+    ).group_by(UnifiedExpense.category).all()
+    
+    return [
+        {
+            "category": cat.value if hasattr(cat, 'value') else cat,
+            "count": count,
+            "total_amount": float(total_amount) if total_amount else 0.0
+        }
+        for cat, count, total_amount in results
+    ]
 
 
 @router.get("/summary", response_model=ExpenseSummary)

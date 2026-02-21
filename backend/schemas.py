@@ -10,15 +10,6 @@ class UserCreate(BaseModel):
     role: UserRole
 
 
-class UserResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    email: str
-    role: UserRole
-    is_active: bool
-
-
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -26,6 +17,41 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     email: Optional[str] = None
+
+
+class UserRegisterRequest(BaseModel):
+    full_name: str
+    email: EmailStr
+    password: str
+    role: UserRole
+
+
+class UserLoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    role: str
+    full_name: str
+    email: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    full_name: Optional[str] = None
+    email: str
+    role: UserRole
+    is_active: bool
+    created_at: datetime
 
 
 class VehicleBase(BaseModel):
@@ -257,6 +283,14 @@ class UnifiedExpenseResponse(UnifiedExpenseBase):
 
     id: int
     created_at: datetime
+
+
+class UnifiedExpensePaginatedResponse(BaseModel):
+    items: List[UnifiedExpenseResponse]
+    total: int
+    page: int
+    per_page: int
+    total_pages: int
 
 
 class ExpenseByCategory(BaseModel):
