@@ -8,7 +8,7 @@ import FormField from '../components/FormField'
 import KPICard from '../components/KPICard'
 import StatusPill from '../components/StatusPill'
 import toast from 'react-hot-toast'
-import { 
+import {
   Plus, DollarSign, Lock, Link2, Trash2, Truck, Fuel, Wrench, Users, FileText,
   Search, X, ChevronDown, Calendar, Filter, ArrowUpDown
 } from 'lucide-react'
@@ -50,7 +50,7 @@ const sortOptions = [
 
 function Dropdown({ isOpen, onClose, children, anchorRef }) {
   if (!isOpen) return null
-  
+
   return (
     <div className="absolute z-50 mt-2">
       {children}
@@ -58,16 +58,16 @@ function Dropdown({ isOpen, onClose, children, anchorRef }) {
   )
 }
 
-function FilterDropdown({ 
-  isOpen, 
-  onClose, 
-  trigger, 
-  children, 
+function FilterDropdown({
+  isOpen,
+  onClose,
+  trigger,
+  children,
   anchorRef,
-  width = "w-64" 
+  width = "w-64"
 }) {
   const dropdownRef = useRef(null)
-  
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -77,15 +77,15 @@ function FilterDropdown({
         }
       }
     }
-    
+
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside)
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isOpen, onClose, anchorRef])
-  
+
   if (!isOpen) return null
-  
+
   return (
     <div ref={dropdownRef} className={`absolute z-50 mt-2 ${width}`}>
       <div className="bg-ff-card border border-ff-border rounded-lg shadow-xl overflow-hidden">
@@ -102,7 +102,7 @@ export default function Expenses() {
   const [drivers, setDrivers] = useState([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  
+
   const [filters, setFilters] = useState({
     search: '',
     categories: [],
@@ -115,64 +115,64 @@ export default function Expenses() {
     sortOrder: 'desc',
     page: 1
   })
-  
+
   const [totalCount, setTotalCount] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [categoryOptions, setCategoryOptions] = useState([])
   const [categorySearch, setCategorySearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const searchTimeoutRef = useRef(null)
-  
+
   const [activeDropdown, setActiveDropdown] = useState(null)
   const categoryBtnRef = useRef(null)
   const sourceBtnRef = useRef(null)
   const amountBtnRef = useRef(null)
   const dateBtnRef = useRef(null)
   const sortBtnRef = useRef(null)
-  
+
   const filteredCategoryOptions = useMemo(() => {
-    return categoryOptions.filter(c => 
+    return categoryOptions.filter(c =>
       c.category.toLowerCase().includes(categorySearch.toLowerCase())
     )
   }, [categoryOptions, categorySearch])
-  
+
   const hasActiveFilters = useMemo(() => {
-    return filters.search || 
-           filters.categories.length > 0 || 
-           filters.sources.length > 0 ||
-           filters.amountMin || 
-           filters.amountMax || 
-           filters.dateFrom || 
-           filters.dateTo ||
-           filters.sortBy !== 'date' || 
-           filters.sortOrder !== 'desc'
+    return filters.search ||
+      filters.categories.length > 0 ||
+      filters.sources.length > 0 ||
+      filters.amountMin ||
+      filters.amountMax ||
+      filters.dateFrom ||
+      filters.dateTo ||
+      filters.sortBy !== 'date' ||
+      filters.sortOrder !== 'desc'
   }, [filters])
-  
+
   useEffect(() => {
     loadCategoryOptions()
     loadData()
   }, [])
-  
+
   useEffect(() => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
     }
-    
+
     searchTimeoutRef.current = setTimeout(() => {
       setFilters(prev => ({ ...prev, search: searchInput, page: 1 }))
     }, 300)
-    
+
     return () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current)
       }
     }
   }, [searchInput])
-  
+
   useEffect(() => {
     loadData()
   }, [filters])
-  
+
   const loadCategoryOptions = async () => {
     try {
       const data = await getExpenseCategories()
@@ -181,7 +181,7 @@ export default function Expenses() {
       console.error('Failed to load categories:', error)
     }
   }
-  
+
   const loadData = async () => {
     setLoading(true)
     try {
@@ -215,7 +215,7 @@ export default function Expenses() {
       setLoading(false)
     }
   }
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
@@ -234,7 +234,7 @@ export default function Expenses() {
       toast.error(error.response?.data?.detail || 'Failed to add expense')
     }
   }
-  
+
   const handleDelete = async (expense) => {
     if (!confirm('Delete this expense?')) return
     try {
@@ -245,7 +245,7 @@ export default function Expenses() {
       toast.error(error.response?.data?.detail || 'Failed to delete expense')
     }
   }
-  
+
   const resetForm = () => {
     setFormData({
       description: '',
@@ -256,7 +256,7 @@ export default function Expenses() {
       note: '',
     })
   }
-  
+
   const resetAllFilters = () => {
     setSearchInput('')
     setFilters({
@@ -273,7 +273,7 @@ export default function Expenses() {
     })
     setCategorySearch('')
   }
-  
+
   const removeFilter = (filterKey) => {
     if (filterKey === 'search') {
       setSearchInput('')
@@ -290,36 +290,36 @@ export default function Expenses() {
       setFilters(prev => ({ ...prev, sortBy: 'date', sortOrder: 'desc', page: 1 }))
     }
   }
-  
+
   const applyCategories = () => {
     setFilters(prev => ({ ...prev, page: 1 }))
     setActiveDropdown(null)
   }
-  
+
   const applySources = () => {
     setFilters(prev => ({ ...prev, page: 1 }))
     setActiveDropdown(null)
   }
-  
+
   const applyAmount = () => {
     setFilters(prev => ({ ...prev, page: 1 }))
     setActiveDropdown(null)
   }
-  
+
   const applyDate = () => {
     setFilters(prev => ({ ...prev, page: 1 }))
     setActiveDropdown(null)
   }
-  
+
   const applySort = (sortBy, sortOrder) => {
     setFilters(prev => ({ ...prev, sortBy, sortOrder, page: 1 }))
     setActiveDropdown(null)
   }
-  
+
   const quickDateSelect = (range) => {
     const today = new Date()
     let from, to
-    
+
     if (range === 'thisMonth') {
       from = new Date(today.getFullYear(), today.getMonth(), 1)
       to = today
@@ -330,34 +330,34 @@ export default function Expenses() {
       from = new Date(today.getFullYear(), 0, 1)
       to = today
     }
-    
+
     setFilters(prev => ({
       ...prev,
       dateFrom: from.toISOString().split('T')[0],
       dateTo: to.toISOString().split('T')[0]
     }))
   }
-  
+
   const getCategoryTotal = (category) => {
     if (!summary?.by_category) return 0
     const found = summary.by_category.find(c => c.category === category)
     return found?.total || 0
   }
-  
+
   const highlightText = (text, highlight) => {
     if (!highlight || !text) return text
     const parts = text.split(new RegExp(`(${highlight})`, 'gi'))
-    return parts.map((part, i) => 
-      part.toLowerCase() === highlight.toLowerCase() 
+    return parts.map((part, i) =>
+      part.toLowerCase() === highlight.toLowerCase()
         ? <mark key={i} className="bg-yellow-500/40 text-yellow-200 rounded px-0.5">{part}</mark>
         : part
     )
   }
-  
+
   const formatCategoryLabel = (category) => {
     return category.replace(/_/g, ' ')
   }
-  
+
   const getCategoryIcon = (category) => {
     const iconMap = {
       'Vehicle_Acquisition': Truck,
@@ -369,11 +369,11 @@ export default function Expenses() {
     }
     return iconMap[category] || FileText
   }
-  
+
   const getCategoryColor = (category) => {
     return categoryColors[category] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'
   }
-  
+
   const [formData, setFormData] = useState({
     description: '',
     amount: '',
@@ -382,7 +382,7 @@ export default function Expenses() {
     driver_id: '',
     note: '',
   })
-  
+
   const categories = [
     { value: 'Vehicle_Acquisition', label: 'Vehicle Acquisition', icon: Truck, color: 'green' },
     { value: 'Trip_Fuel', label: 'Trip Fuel', icon: Fuel, color: 'blue' },
@@ -391,16 +391,16 @@ export default function Expenses() {
     { value: 'Driver_Compliance', label: 'Driver Compliance', icon: Users, color: 'purple' },
     { value: 'Miscellaneous', label: 'Miscellaneous', icon: FileText, color: 'gray' },
   ]
-  
+
   const columns = [
     { key: 'id', label: '#' },
-    { 
-      key: 'date', 
+    {
+      key: 'date',
       label: 'Date',
       render: (val) => new Date(val).toLocaleDateString()
     },
-    { 
-      key: 'category', 
+    {
+      key: 'category',
       label: 'Category',
       render: (val) => (
         <span className={`px-3 py-1 rounded-full text-xs font-medium border ${categoryColors[val]}`}>
@@ -408,8 +408,8 @@ export default function Expenses() {
         </span>
       )
     },
-    { 
-      key: 'source_module', 
+    {
+      key: 'source_module',
       label: 'Source',
       render: (val, row) => (
         <div className="flex items-center gap-2">
@@ -420,13 +420,13 @@ export default function Expenses() {
         </div>
       )
     },
-    { 
-      key: 'description', 
+    {
+      key: 'description',
       label: 'Description',
       render: (val) => highlightText(val, filters.search)
     },
-    { 
-      key: 'vehicle_id', 
+    {
+      key: 'vehicle_id',
       label: 'Vehicle',
       render: (val) => {
         if (!val) return '-'
@@ -434,8 +434,8 @@ export default function Expenses() {
         return vehicle?.name || '-'
       }
     },
-    { 
-      key: 'driver_id', 
+    {
+      key: 'driver_id',
       label: 'Driver',
       render: (val) => {
         if (!val) return '-'
@@ -443,13 +443,13 @@ export default function Expenses() {
         return driver?.name || '-'
       }
     },
-    { 
-      key: 'amount', 
+    {
+      key: 'amount',
       label: 'Amount (₹)',
       render: (val) => `₹${val?.toLocaleString()}`
     },
-    { 
-      key: 'actions', 
+    {
+      key: 'actions',
       label: 'Actions',
       render: (_, row) => (
         row.source_module === 'Manual' ? (
@@ -467,11 +467,11 @@ export default function Expenses() {
       )
     },
   ]
-  
+
   const currentSortOption = sortOptions.find(
     opt => opt.sortBy === filters.sortBy && opt.sortOrder === filters.sortOrder
   )
-  
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -484,7 +484,7 @@ export default function Expenses() {
           Add Manual Expense
         </button>
       </div>
-      
+
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
         {categories.map((cat) => {
           const Icon = cat.icon
@@ -510,7 +510,7 @@ export default function Expenses() {
           </p>
         </div>
       </div>
-      
+
       <div className="bg-ff-card border border-ff-border rounded-lg p-4 mb-6">
         <div className="relative mb-4">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -530,8 +530,8 @@ export default function Expenses() {
             </button>
           )}
         </div>
-        
-        <div className="flex flex-wrap gap-2 items-center overflow-x-auto pb-2">
+
+        <div className="flex flex-wrap gap-2 items-center pb-2">
           <div className="relative">
             <button
               ref={categoryBtnRef}
@@ -539,8 +539,8 @@ export default function Expenses() {
               className={`flex items-center gap-2 px-4 py-2 bg-ff-bg border rounded-lg text-white hover:bg-ff-border ${filters.categories.length > 0 ? 'border-ff-green' : 'border-ff-border'}`}
             >
               <Filter className="w-4 h-4" />
-              {filters.categories.length > 0 
-                ? `Categories (${filters.categories.length})` 
+              {filters.categories.length > 0
+                ? `Categories (${filters.categories.length})`
                 : 'All Categories'}
               <ChevronDown className="w-4 h-4" />
               {filters.categories.length > 0 && (
@@ -606,7 +606,7 @@ export default function Expenses() {
               </div>
             </FilterDropdown>
           </div>
-          
+
           <div className="relative">
             <button
               ref={sourceBtnRef}
@@ -614,8 +614,8 @@ export default function Expenses() {
               className={`flex items-center gap-2 px-4 py-2 bg-ff-bg border rounded-lg text-white hover:bg-ff-border ${filters.sources.length > 0 ? 'border-ff-green' : 'border-ff-border'}`}
             >
               <Filter className="w-4 h-4" />
-              {filters.sources.length > 0 
-                ? `Sources (${filters.sources.length})` 
+              {filters.sources.length > 0
+                ? `Sources (${filters.sources.length})`
                 : 'All Sources'}
               <ChevronDown className="w-4 h-4" />
               {filters.sources.length > 0 && (
@@ -671,7 +671,7 @@ export default function Expenses() {
               </div>
             </FilterDropdown>
           </div>
-          
+
           <div className="relative">
             <button
               ref={amountBtnRef}
@@ -679,8 +679,8 @@ export default function Expenses() {
               className={`flex items-center gap-2 px-4 py-2 bg-ff-bg border rounded-lg text-white hover:bg-ff-border ${(filters.amountMin || filters.amountMax) ? 'border-ff-green' : 'border-ff-border'}`}
             >
               <DollarSign className="w-4 h-4" />
-              {filters.amountMin || filters.amountMax 
-                ? `₹${filters.amountMin || '0'} - ₹${filters.amountMax || '∞'}` 
+              {filters.amountMin || filters.amountMax
+                ? `₹${filters.amountMin || '0'} - ₹${filters.amountMax || '∞'}`
                 : 'Amount Range'}
               <ChevronDown className="w-4 h-4" />
               {(filters.amountMin || filters.amountMax) && (
@@ -731,7 +731,7 @@ export default function Expenses() {
               </div>
             </FilterDropdown>
           </div>
-          
+
           <div className="relative">
             <button
               ref={dateBtnRef}
@@ -739,8 +739,8 @@ export default function Expenses() {
               className={`flex items-center gap-2 px-4 py-2 bg-ff-bg border rounded-lg text-white hover:bg-ff-border ${(filters.dateFrom || filters.dateTo) ? 'border-ff-green' : 'border-ff-border'}`}
             >
               <Calendar className="w-4 h-4" />
-              {filters.dateFrom || filters.dateTo 
-                ? `${filters.dateFrom ? new Date(filters.dateFrom).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : 'Start'} – ${filters.dateTo ? new Date(filters.dateTo).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : 'End'}` 
+              {filters.dateFrom || filters.dateTo
+                ? `${filters.dateFrom ? new Date(filters.dateFrom).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : 'Start'} – ${filters.dateTo ? new Date(filters.dateTo).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : 'End'}`
                 : 'Date Range'}
               <ChevronDown className="w-4 h-4" />
               {(filters.dateFrom || filters.dateTo) && (
@@ -809,7 +809,7 @@ export default function Expenses() {
               </div>
             </FilterDropdown>
           </div>
-          
+
           <div className="relative">
             <button
               ref={sortBtnRef}
@@ -842,7 +842,7 @@ export default function Expenses() {
               </div>
             </FilterDropdown>
           </div>
-          
+
           {hasActiveFilters && (
             <button
               onClick={resetAllFilters}
@@ -853,7 +853,7 @@ export default function Expenses() {
             </button>
           )}
         </div>
-        
+
         {hasActiveFilters && (
           <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-ff-border">
             {filters.search && (
@@ -917,13 +917,13 @@ export default function Expenses() {
           </div>
         )}
       </div>
-      
+
       {!loading && (
         <div className="mb-4 text-gray-400">
           Showing {expenses.length} of {totalCount} expenses
         </div>
       )}
-      
+
       {loading ? (
         <div className="bg-ff-card border border-ff-border rounded-lg overflow-hidden">
           <div className="animate-pulse">
@@ -950,7 +950,7 @@ export default function Expenses() {
           data={expenses}
         />
       )}
-      
+
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-2 mt-6">
           <button
@@ -972,7 +972,7 @@ export default function Expenses() {
           </button>
         </div>
       )}
-      
+
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
