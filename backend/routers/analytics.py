@@ -5,7 +5,7 @@ from typing import List
 from datetime import datetime, timedelta
 
 from database import get_db
-from models import User, Vehicle, Trip, MaintenanceLog, Expense, TripStatus, VehicleStatus, Driver, UnifiedExpense
+from models import User, Vehicle, Trip, MaintenanceLog, Expense, TripStatus, VehicleStatus, Driver, UnifiedExpense, ExpenseCategory
 from schemas import DashboardStats, AnalyticsReports, MonthlySummary, VehicleCost
 from auth import get_current_user
 
@@ -45,159 +45,141 @@ def get_analytics_reports(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    total_fuel_cost = db.query(func.coalesce(func.sum(Expense.fuel_cost), 0)).scalar()
+    # 1. Total Fuel Cost from UnifiedExpense instead of empty Expense table
+    total_fuel_cost = db.query(func.coalesce(func.sum(UnifiedExpense.amount), 0)).filter(
+        UnifiedExpense.category == ExpenseCategory.Trip_Fuel
+    ).scalar()
 
     vehicles = db.query(Vehicle).filter(Vehicle.status != VehicleStatus.Retired).all()
+    
+    # 2. Optimized Fleet ROI using Unified Queries
+    # Fetch summarized data per vehicle in single queries where possible
+    
+    # Revenue/Distance per vehicle
+    trip_summary = db.query(
+        Trip.vehicle_id,
+        func.coalesce(func.sum(Trip.revenue), 0).label("revenue"),
+        func.coalesce(func.sum(Trip.actual_distance_km), 0).label("distance")
+    ).filter(Trip.status == TripStatus.Completed).group_by(Trip.vehicle_id).all()
+    
+    trip_map = {t.vehicle_id: t for t in trip_summary}
+
+    # Fuel/Maintenance cost per vehicle
+    cost_summary = db.query(
+        UnifiedExpense.vehicle_id,
+        func.coalesce(func.sum(UnifiedExpense.amount).filter(UnifiedExpense.category == ExpenseCategory.Trip_Fuel), 0).label("fuel"),
+        func.coalesce(func.sum(UnifiedExpense.amount).filter(UnifiedExpense.category == ExpenseCategory.Maintenance_Repair), 0).label("maintenance")
+    ).group_by(UnifiedExpense.vehicle_id).all()
+    
+    cost_map = {c.vehicle_id: c for c in cost_summary}
+
     fleet_roi = []
+    fuel_efficiency = []
+    vehicle_costs = []
 
     for vehicle in vehicles:
-        revenue = db.query(func.coalesce(func.sum(Trip.revenue), 0)).filter(
-            Trip.vehicle_id == vehicle.id,
-            Trip.status == TripStatus.Completed
-        ).scalar()
-
-        fuel_cost = db.query(func.coalesce(func.sum(Expense.fuel_cost), 0)).filter(
-            Expense.vehicle_id == vehicle.id
-        ).scalar()
-
-        maintenance_cost = db.query(func.coalesce(func.sum(MaintenanceLog.cost), 0)).filter(
-            MaintenanceLog.vehicle_id == vehicle.id
-        ).scalar()
-
-        total_distance = db.query(func.coalesce(func.sum(Trip.actual_distance_km), 0)).filter(
-            Trip.vehicle_id == vehicle.id,
-            Trip.status == TripStatus.Completed
-        ).scalar()
-
-        total_cost = float(fuel_cost) + float(maintenance_cost)
-        roi = ((float(revenue) - total_cost) / vehicle.acquisition_cost * 100) if vehicle.acquisition_cost > 0 else 0.0
-        cost_per_km = total_cost / float(total_distance) if total_distance > 0 else 0.0
+        t_data = trip_map.get(vehicle.id)
+        c_data = cost_map.get(vehicle.id)
+        
+        revenue = float(t_data.revenue if t_data else 0)
+        distance = float(t_data.distance if t_data else 0)
+        fuel_cost = float(c_data.fuel if c_data else 0)
+        maintenance_cost = float(c_data.maintenance if c_data else 0)
+        
+        total_cost = fuel_cost + maintenance_cost
+        roi = ((revenue - total_cost) / vehicle.acquisition_cost * 100) if vehicle.acquisition_cost > 0 else 0.0
+        cost_per_km = total_cost / distance if distance > 0 else 0.0
 
         fleet_roi.append({
             "vehicle_id": vehicle.id,
             "vehicle_name": vehicle.name,
-            "revenue": float(revenue),
+            "revenue": revenue,
             "total_cost": total_cost,
-            "total_distance": float(total_distance),
+            "total_distance": distance,
             "cost_per_km": round(cost_per_km, 2),
             "roi": round(roi, 2)
         })
 
-    fuel_efficiency = []
-    for vehicle in vehicles:
-        total_distance = db.query(func.coalesce(func.sum(Trip.actual_distance_km), 0)).filter(
-            Trip.vehicle_id == vehicle.id,
-            Trip.status == TripStatus.Completed
-        ).scalar()
-
-        total_fuel_cost_veh = db.query(func.coalesce(func.sum(Expense.fuel_cost), 0)).filter(
-            Expense.vehicle_id == vehicle.id
-        ).scalar()
-
-        efficiency = float(total_distance) / float(total_fuel_cost_veh) if total_fuel_cost_veh > 0 else 0.0
-
+        efficiency = distance / fuel_cost if fuel_cost > 0 else 0.0
         fuel_efficiency.append({
             "vehicle_id": vehicle.id,
             "vehicle_name": vehicle.name,
-            "total_distance": float(total_distance),
-            "total_fuel_cost": float(total_fuel_cost_veh),
+            "total_distance": distance,
+            "total_fuel_cost": fuel_cost,
             "km_per_rupee": round(efficiency, 2)
         })
 
-    monthly_data = {}
-    trips = db.query(Trip).filter(Trip.status == TripStatus.Completed).all()
-    for trip in trips:
-        month_key = trip.completed_at.strftime("%Y-%m") if trip.completed_at else "Unknown"
-        if month_key not in monthly_data:
-            monthly_data[month_key] = {
-                "revenue": 0.0,
-                "fuel_cost": 0.0,
-                "maintenance_cost": 0.0,
-                "trips": 0,
-                "distance": 0.0
-            }
-        monthly_data[month_key]["revenue"] += float(trip.revenue or 0)
-        monthly_data[month_key]["trips"] += 1
-        monthly_data[month_key]["distance"] += float(trip.actual_distance_km or 0)
+        vehicle_costs.append(VehicleCost(
+            vehicle_id=vehicle.id,
+            vehicle_name=vehicle.name,
+            total_fuel_cost=fuel_cost,
+            total_maintenance_cost=maintenance_cost,
+            total_cost=total_cost
+        ))
 
-    expenses = db.query(Expense).all()
-    for expense in expenses:
-        month_key = expense.created_at.strftime("%Y-%m")
-        if month_key not in monthly_data:
-            monthly_data[month_key] = {
-                "revenue": 0.0,
-                "fuel_cost": 0.0,
-                "maintenance_cost": 0.0,
-                "trips": 0,
-                "distance": 0.0
-            }
-        monthly_data[month_key]["fuel_cost"] += float(expense.fuel_cost)
+    # 3. Monthly Summary using SQL aggregation
+    # Query Trip Monthlies
+    trip_months = db.query(
+        func.strftime("%Y-%m", Trip.completed_at).label("month"),
+        func.coalesce(func.sum(Trip.revenue), 0).label("revenue")
+    ).filter(Trip.status == TripStatus.Completed).group_by("month").all()
 
-    logs = db.query(MaintenanceLog).all()
-    for log in logs:
-        month_key = log.service_date.strftime("%Y-%m")
-        if month_key not in monthly_data:
-            monthly_data[month_key] = {
-                "revenue": 0.0,
-                "fuel_cost": 0.0,
-                "maintenance_cost": 0.0,
-                "trips": 0,
-                "distance": 0.0
-            }
-        monthly_data[month_key]["maintenance_cost"] += float(log.cost)
+    # Query Expense Monthlies
+    expense_months = db.query(
+        func.strftime("%Y-%m", UnifiedExpense.date).label("month"),
+        func.coalesce(func.sum(UnifiedExpense.amount).filter(UnifiedExpense.category == ExpenseCategory.Trip_Fuel), 0).label("fuel"),
+        func.coalesce(func.sum(UnifiedExpense.amount).filter(UnifiedExpense.category == ExpenseCategory.Maintenance_Repair), 0).label("maintenance")
+    ).group_by("month").all()
+
+    monthly_map = {}
+    for m in trip_months:
+        if m.month: # Guard against null month if completed_at is somehow null on a completed trip
+            monthly_map[m.month] = {"revenue": float(m.revenue or 0), "fuel": 0.0, "maintenance": 0.0}
+    
+    for m in expense_months:
+        if m.month:
+            if m.month not in monthly_map:
+                monthly_map[m.month] = {"revenue": 0.0, "fuel": 0.0, "maintenance": 0.0}
+            monthly_map[m.month]["fuel"] = float(m.fuel or 0)
+            monthly_map[m.month]["maintenance"] = float(m.maintenance or 0)
 
     monthly_summary = []
-    for month in sorted(monthly_data.keys()):
-        data = monthly_data[month]
+    for month in sorted(monthly_map.keys()):
+        data = monthly_map[month]
         monthly_summary.append(MonthlySummary(
             month=month,
             revenue_proxy=data["revenue"],
-            fuel_cost=data["fuel_cost"],
-            maintenance_cost=data["maintenance_cost"],
-            net_profit=data["revenue"] - (data["fuel_cost"] + data["maintenance_cost"])
+            fuel_cost=data["fuel"],
+            maintenance_cost=data["maintenance"],
+            net_profit=data["revenue"] - (data["fuel"] + data["maintenance"])
         ))
 
-    costliest_vehicles = []
-    for vehicle in vehicles:
-        fuel = db.query(func.coalesce(func.sum(Expense.fuel_cost), 0)).filter(
-            Expense.vehicle_id == vehicle.id
-        ).scalar()
-        maintenance = db.query(func.coalesce(func.sum(MaintenanceLog.cost), 0)).filter(
-            MaintenanceLog.vehicle_id == vehicle.id
-        ).scalar()
-        costliest_vehicles.append(VehicleCost(
-            vehicle_id=vehicle.id,
-            vehicle_name=vehicle.name,
-            total_fuel_cost=float(fuel),
-            total_maintenance_cost=float(maintenance),
-            total_cost=float(fuel) + float(maintenance)
-        ))
-
-    costliest_vehicles.sort(key=lambda x: x.total_cost, reverse=True)
-    costliest_vehicles = costliest_vehicles[:5]
-
+    # 4. Dead Stock (Vehicles with no trips in last 30 days)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    # Get IDs of vehicles with recent trips
+    active_vehicle_ids = db.query(Trip.vehicle_id).filter(
+        Trip.status == TripStatus.Completed,
+        Trip.completed_at >= thirty_days_ago
+    ).distinct().all()
+    active_vehicle_ids = [v[0] for v in active_vehicle_ids]
+
     dead_stock = []
     for vehicle in vehicles:
-        recent_trips = db.query(Trip).filter(
-            Trip.vehicle_id == vehicle.id,
-            Trip.status == TripStatus.Completed,
-            Trip.completed_at >= thirty_days_ago
-        ).count()
-
-        if recent_trips == 0:
+        if vehicle.id not in active_vehicle_ids:
             dead_stock.append({
                 "vehicle_id": vehicle.id,
                 "vehicle_name": vehicle.name,
                 "license_plate": vehicle.license_plate
             })
 
+    vehicle_costs.sort(key=lambda x: x.total_cost, reverse=True)
+
     return AnalyticsReports(
         total_fuel_cost=float(total_fuel_cost),
         fleet_roi=fleet_roi,
         fuel_efficiency=fuel_efficiency,
         monthly_summary=monthly_summary,
-        costliest_vehicles=costliest_vehicles,
+        costliest_vehicles=vehicle_costs[:5],
         dead_stock=dead_stock
     )
 

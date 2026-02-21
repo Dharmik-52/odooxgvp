@@ -1,13 +1,22 @@
 import os
-import sentry_sdk
-from sentry_sdk.integrations.fastapi import FastApiIntegration
-from sentry_sdk.integrations.starlette import StarletteIntegration
+
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.starlette import StarletteIntegration
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
 
 
 def init_sentry():
     """Initialize Sentry SDK for backend error tracking.
     Only activates if SENTRY_DSN environment variable is set.
     """
+    if not SENTRY_AVAILABLE:
+        print("[Sentry] sentry-sdk not installed — skipping initialization")
+        return
+
     dsn = os.environ.get("SENTRY_DSN", "")
     if not dsn:
         print("[Sentry] No SENTRY_DSN set — skipping initialization")
