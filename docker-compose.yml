@@ -2,6 +2,7 @@ version: '3.8'
 
 services:
   backend:
+    container_name: fleetflow-backend
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -11,13 +12,18 @@ services:
       - DATABASE_URL=sqlite:///./fleetflow.db
       - SECRET_KEY=your-secret-key-change-in-production
     volumes:
-      - ./backend:/app
-      - backend-data:/app
+      - backend-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - fleetflow-network
     restart: unless-stopped
 
   frontend:
+    container_name: fleetflow-frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -25,11 +31,9 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_URL=http://localhost:8000/api/v1
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - fleetflow-network
     restart: unless-stopped
