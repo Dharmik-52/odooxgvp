@@ -7,6 +7,35 @@ from models import (
 )
 from auth import get_password_hash
 
+DRIVER_USER_LINKS = {
+    "john@fleetflow.com": "John Smith",
+    "maria@fleetflow.com": "Maria Garcia",
+    "david@fleetflow.com": "David Chen",
+}
+
+
+def link_driver_users(db):
+    """Link driver login accounts to their Driver profiles by name.
+
+    Repairs databases seeded before user_id was set on drivers.
+    """
+    changed = False
+    for email, name in DRIVER_USER_LINKS.items():
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            continue
+        driver = db.query(Driver).filter(
+            Driver.name == name,
+            Driver.user_id.is_(None)
+        ).first()
+        if driver:
+            driver.user_id = user.id
+            changed = True
+    if changed:
+        db.commit()
+        print("Linked driver users to driver profiles.")
+    return changed
+
 
 def seed_database(drop_all=False):
     """Seed the database with comprehensive trial data.
@@ -27,6 +56,7 @@ def seed_database(drop_all=False):
         existing_user = db.query(User).filter(User.email == "admin@fleetflow.com").first()
         if existing_user and not drop_all:
             print("Database already seeded. Skipping...")
+            link_driver_users(db)
             return
         
         print("Seeding admin user...")
@@ -82,9 +112,9 @@ def seed_database(drop_all=False):
         
         print("Seeding drivers...")
         drivers_data = [
-            Driver(name="John Smith", license_number="DL-111111", license_expiry=date(2027, 12, 31), completion_rate=95.0, safety_score=98.0, duty_status=DutyStatus.On_Duty),
-            Driver(name="Maria Garcia", license_number="DL-222222", license_expiry=date(2026, 6, 15), completion_rate=88.0, safety_score=92.0, duty_status=DutyStatus.On_Duty),
-            Driver(name="David Chen", license_number="DL-333333", license_expiry=date(2025, 3, 20), completion_rate=100.0, safety_score=100.0, duty_status=DutyStatus.Off_Duty),
+            Driver(name="John Smith", user_id=driver_user1.id, license_number="DL-111111", license_expiry=date(2027, 12, 31), completion_rate=95.0, safety_score=98.0, duty_status=DutyStatus.On_Duty),
+            Driver(name="Maria Garcia", user_id=driver_user2.id, license_number="DL-222222", license_expiry=date(2026, 6, 15), completion_rate=88.0, safety_score=92.0, duty_status=DutyStatus.On_Duty),
+            Driver(name="David Chen", user_id=driver_user3.id, license_number="DL-333333", license_expiry=date(2025, 3, 20), completion_rate=100.0, safety_score=100.0, duty_status=DutyStatus.Off_Duty),
             Driver(name="Alex Johnson", license_number="DL-444444", license_expiry=date(2024, 1, 10), completion_rate=75.0, safety_score=60.0, duty_status=DutyStatus.Suspended),
             Driver(name="Sarah Williams", license_number="DL-555555", license_expiry=date(2028, 5, 5), completion_rate=99.0, safety_score=95.0, duty_status=DutyStatus.On_Duty),
         ]

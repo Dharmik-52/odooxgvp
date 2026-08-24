@@ -45,7 +45,7 @@ export default function DriverDashboard() {
         <div className="space-y-6 max-w-4xl mx-auto">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold text-white">Welcome back, {user?.name || 'Driver'}</h1>
+                    <h1 className="text-2xl font-bold text-white">Welcome back, {user?.full_name || 'Driver'}</h1>
                     <p className="text-gray-400">Here's your current duty status and assignments.</p>
                 </div>
                 <div className="flex items-center gap-2 bg-green-500/20 text-green-400 px-4 py-2 rounded-full border border-green-500/30">
