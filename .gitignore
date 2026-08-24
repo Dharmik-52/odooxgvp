@@ -13,4 +13,5 @@ dist/
 build/
 *.log
 .env
+*_log*.txt
 .DS_Store
