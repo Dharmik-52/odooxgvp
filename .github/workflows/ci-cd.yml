@@ -67,12 +67,12 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Build Docker images
-        run: |
-          docker-compose build
-      
+        run: docker compose build
+
       - name: Verify containers start
         run: |
-          docker-compose up -d
-          sleep 10
-          docker-compose ps
-          docker-compose down
+          docker compose up -d --wait --wait-timeout 120
+          docker compose ps
+          curl -fsS http://localhost:8000/health
+          curl -fsS -o /dev/null -w "frontend HTTP %{http_code}\n" http://localhost:5173/
+          docker compose down
